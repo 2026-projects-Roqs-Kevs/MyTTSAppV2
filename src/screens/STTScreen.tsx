@@ -18,13 +18,13 @@ const STTScreen = () => {
   const [partialText, setPartialText] = useState('');
   const [isInitialized, setIsInitialized] = useState(false);
   const isDarkMode = useColorScheme() === 'dark';
-  const [currentLanguage, setCurrentLanguage] = useState<'en' | 'tl'>('en');
+  const [currentLanguage, setCurrentLanguage] = useState<'en' | 'tl'>('tl');
 
   useEffect(() => {
     // Initialize Voice on component mount
     const initializeVoice = async () => {
       try {
-        await sttService.initialize('en-US'); // English US
+        await sttService.initialize('model-tl-ph');
         setIsInitialized(true);
       } catch (error) {
         console.error('Failed to initialize Voice:', error);
@@ -119,9 +119,9 @@ const STTScreen = () => {
     try {
       const newLang = currentLanguage === 'en' ? 'tl' : 'en';
       // Voice uses standard language codes
-      const languageCode = newLang === 'en' ? 'en-US' : 'tl-PH'; // Tagalog Philippines
+      const modelPath = newLang === 'en' ? 'model-en-us' : 'model-tl-ph';
       
-      await sttService.switchLanguage(languageCode);
+      await sttService.switchLanguage(modelPath);
       setCurrentLanguage(newLang);
       Alert.alert('Success', `Switched to ${newLang === 'en' ? 'English' : 'Tagalog'}`);
     } catch (error) {

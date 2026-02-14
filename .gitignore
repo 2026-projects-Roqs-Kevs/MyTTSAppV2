@@ -64,3 +64,6 @@ yarn-error.log
 
 # testing
 /coverage
+
+assets/model-en-us/
+assets/model-tl-ph/

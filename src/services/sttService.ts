@@ -1,31 +1,31 @@
-import Voice from '@react-native-voice/voice';
+import { NativeModules, NativeEventEmitter } from 'react-native';
+
+const { Vosk } = NativeModules;
+const voskEmitter = new NativeEventEmitter(Vosk);
+
+let currentModel: string = 'model-en-us';
 
 class STTService {
   private isInitialized: boolean = false;
-  private currentLanguage: string = 'en-US';
+  private listeners: any[] = [];
 
-  async initialize(language: string = 'en-US') {
+  async initialize(modelPath: string) {
     try {
-      this.currentLanguage = language;
-      
-      // Check if speech recognition is available
-      const available = await Voice.isAvailable();
-      if (!available) {
-        throw new Error('Speech recognition is not available on this device');
-      }
-
+      await Vosk.loadModel(modelPath);
+      currentModel = modelPath;
       this.isInitialized = true;
-      console.log('Voice STT initialized successfully with language:', language);
+      console.log('Vosk STT initialized successfully with model:', modelPath);
     } catch (error) {
-      console.error('Error initializing Voice:', error);
+      console.error('Error initializing Vosk:', error);
       throw error;
     }
   }
 
-  async switchLanguage(language: string) {
+  async switchLanguage(modelPath: string) {
     try {
-      this.currentLanguage = language;
-      console.log('Switched to language:', language);
+      await this.cleanup();
+      await this.initialize(modelPath);
+      console.log('Switched to model:', modelPath);
     } catch (error) {
       console.error('Error switching language:', error);
       throw error;
@@ -41,34 +41,50 @@ class STTService {
     }
 
     try {
-      // Set up event handlers
-      Voice.onSpeechResults = (e: any) => {
-        console.log('>>> onSpeechResults:', e.value);
-        if (e.value && e.value.length > 0) {
-          onResult(e.value[0]);
+      this.removeListeners();
+
+      const resultListener = voskEmitter.addListener('onResult', (data: string) => {
+        console.log('>>> onResult:', data);
+        if (data) {
+          onResult(data);
         }
-      };
+      });
+
+      const finalResultListener = voskEmitter.addListener('onFinalResult', (data: string) => {
+        console.log('>>> onFinalResult:', data);
+        if (data) {
+          onResult(data);
+        }
+      });
 
       if (onPartialResult) {
-        Voice.onSpeechPartialResults = (e: any) => {
-          console.log('>>> onSpeechPartialResults:', e.value);
-          if (e.value && e.value.length > 0) {
-            onPartialResult(e.value[0]);
+        const partialListener = voskEmitter.addListener('onPartialResult', (data: string) => {
+          console.log('>>> onPartialResult:', data);
+          if (data) {
+            onPartialResult(data);
           }
-        };
+        });
+        this.listeners.push(partialListener);
       }
 
-      Voice.onSpeechError = (e: any) => {
-        console.error('>>> Speech recognition error:', e.error);
-      };
+      const errorListener = voskEmitter.addListener('onError', (error: string) => {
+        console.error('>>> Vosk error:', error);
+      });
 
-      Voice.onSpeechEnd = () => {
-        console.log('>>> Speech recognition ended');
-      };
+      const timeoutListener = voskEmitter.addListener('onTimeout', () => {
+        console.log('>>> Vosk timeout');
+      });
 
-      console.log('>>> Starting speech recognition...');
-      await Voice.start(this.currentLanguage);
-      console.log('>>> Speech recognition started!');
+      this.listeners.push(
+        resultListener,
+        finalResultListener,
+        errorListener,
+        timeoutListener
+      );
+
+      console.log('>>> Starting recognition...');
+      await Vosk.start(null);
+      console.log('>>> Recognition started!');
     } catch (error) {
       console.error('>>> Error starting recognition:', error);
       throw error;
@@ -77,7 +93,8 @@ class STTService {
 
   async stopListening() {
     try {
-      await Voice.stop();
+      await Vosk.stop();
+      this.removeListeners();
       console.log('Stopped listening');
     } catch (error) {
       console.error('Error stopping recognition:', error);
@@ -85,10 +102,15 @@ class STTService {
     }
   }
 
+  private removeListeners() {
+    this.listeners.forEach(listener => listener.remove());
+    this.listeners = [];
+  }
+
   async cleanup() {
     try {
-      await Voice.destroy();
-      Voice.removeAllListeners();
+      await Vosk.unload();
+      this.removeListeners();
       this.isInitialized = false;
       console.log('STT Service cleaned up');
     } catch (error) {
