@@ -5,6 +5,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import TTSScreen from './src/screens/TTSScreen';
 import STTScreen from './src/screens/STTScreen';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 const Tab = createBottomTabNavigator();
 
@@ -34,16 +35,20 @@ function App() {
             name="Speech to Text"
             component={STTScreen}
             options={{
-              tabBarLabel: 'STT',
-              tabBarIcon: () => null, // You can add icons later if you want
+              tabBarLabel: 'Speech',
+              tabBarIcon: ({ color, size }) => (
+                <Icon name="volume-high-sharp" size={size} color={color} />
+              ),
             }}
           />
             <Tab.Screen
               name="Text to Speech"
               component={TTSScreen}
               options={{
-                tabBarLabel: 'TTS',
-                tabBarIcon: () => null, // You can add icons later if you want
+                tabBarLabel: 'Text',
+                tabBarIcon: ({ color, size }) => (
+                  <Icon name="pencil-outline" size={size} color={color} />
+                ),
               }}
             />
         </Tab.Navigator>

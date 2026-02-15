@@ -11,12 +11,14 @@ import {
   PermissionsAndroid,
 } from 'react-native';
 import sttService from '../services/sttService';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 const STTScreen = () => {
   const [isListening, setIsListening] = useState(false);
   const [transcribedText, setTranscribedText] = useState('');
   const [partialText, setPartialText] = useState('');
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const isDarkMode = useColorScheme() === 'dark';
   const [currentLanguage, setCurrentLanguage] = useState<'en' | 'tl'>('tl');
 
@@ -24,6 +26,7 @@ const STTScreen = () => {
     // Initialize Voice on component mount
     const initializeVoice = async () => {
       try {
+        setIsInitializing(true);
         await sttService.initialize('model-tl-ph');
         setIsInitialized(true);
       } catch (error) {
@@ -32,6 +35,8 @@ const STTScreen = () => {
           'Initialization Error',
           'Failed to initialize speech recognition.'
         );
+      } finally {
+        setIsInitializing(false);
       }
     };
 
@@ -116,9 +121,11 @@ const STTScreen = () => {
   };
 
   const handleSwitchLanguage = async () => {
+    if (isListening || isInitializing) return;
+
     try {
+      setIsInitializing(true);
       const newLang = currentLanguage === 'en' ? 'tl' : 'en';
-      // Voice uses standard language codes
       const modelPath = newLang === 'en' ? 'model-en-us' : 'model-tl-ph';
       
       await sttService.switchLanguage(modelPath);
@@ -126,33 +133,44 @@ const STTScreen = () => {
       Alert.alert('Success', `Switched to ${newLang === 'en' ? 'English' : 'Tagalog'}`);
     } catch (error) {
       Alert.alert('Error', 'Failed to switch language');
+    } finally {
+      setIsInitializing(false);
     }
   };
 
   return (
     <View style={[styles.container, isDarkMode && styles.containerDark]}>
-      <Text style={[styles.title, isDarkMode && styles.textDark]}>
-        Speech to Text
-      </Text>
-
-      <TouchableOpacity
-        style={[styles.languageButton, isDarkMode && styles.languageButtonDark]}
-        onPress={handleSwitchLanguage}
-        disabled={isListening}
-      >
-        <Text style={[styles.languageButtonText, isDarkMode && styles.textDark]}>
-          Language: {currentLanguage === 'en' ? 'English 🇺🇸' : 'Tagalog 🇵🇭'}
+      <View style={[styles.flexRow]}>
+        <Text style={[styles.title, isDarkMode && styles.textDark]}>
+          Switch Button:
         </Text>
-      </TouchableOpacity>
 
-      <View style={styles.statusContainer}>
-        <View style={[
-          styles.statusIndicator,
-          isListening && styles.statusIndicatorActive,
-        ]} />
-        <Text style={[styles.statusText, isDarkMode && styles.textDark]}>
-          {isListening ? 'Listening...' : 'Ready'}
-        </Text>
+        <TouchableOpacity
+          style={[styles.languageButton, isDarkMode && styles.languageButtonDark]}
+          onPress={handleSwitchLanguage}
+          disabled={isListening || isInitializing}
+        >
+          <Text style={[styles.languageButtonText, isDarkMode && styles.textDark]}>
+            {isInitializing ? 'Loading...' : `Language: ${currentLanguage === 'en' ? 'English 🇺🇸' : 'Tagalog 🇵🇭'}`}
+          </Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.flexRow}>
+        <View style={styles.statusContainer}>
+          <View style={[
+            styles.statusIndicator,
+            isListening && styles.statusIndicatorActive,
+          ]} />
+          <Text style={[styles.statusText, isDarkMode && styles.textDark]}>
+            {isListening ? 'Listening...' : 'Ready'}
+          </Text>
+        </View>
+        <View style={[styles.statusContainer, {gap: 5}]}>
+          <Icon name='information-circle-outline' size={16} color="#3ba7ff" />
+          <Text style={[styles.statusText, isDarkMode && styles.textDark, {fontSize: 12}]}>
+            Speak loudly and clearly
+          </Text>
+        </View>
       </View>
 
       <ScrollView
@@ -160,7 +178,7 @@ const STTScreen = () => {
         contentContainerStyle={styles.textContent}
       >
         <Text style={[styles.transcribedText, isDarkMode && styles.textDark]}>
-          {transcribedText || 'Your transcribed text will appear here...'}
+          {transcribedText || '...'}
         </Text>
         {partialText && (
           <Text style={[styles.partialText, isDarkMode && styles.partialTextDark]}>
@@ -168,23 +186,35 @@ const STTScreen = () => {
           </Text>
         )}
       </ScrollView>
-
       <View style={styles.buttonContainer}>
-        {!isListening ? (
-          <TouchableOpacity
-            style={[styles.button, styles.startButton]}
-            onPress={handleStartListening}
-          >
-            <Text style={styles.buttonText}>Start Recording</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={[styles.button, styles.stopButton]}
-            onPress={handleStopListening}
-          >
+      {!isListening ? (
+        <TouchableOpacity
+          style={[
+            styles.button, 
+            styles.startButton,
+            (isInitializing || !isInitialized) && styles.buttonDisabled
+          ]}
+          onPress={handleStartListening}
+          disabled={isInitializing || !isInitialized}
+        >
+          <View style={styles.buttonContent}>
+            <Icon name="mic-outline" size={24} color="#fff" />
+            <Text style={styles.buttonText}>
+              {isInitializing ? 'Initializing...' : 'Start Recording'}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          style={[styles.button, styles.stopButton]}
+          onPress={handleStopListening}
+        >
+          <View style={styles.buttonContent}>
+            <Icon name="stop-circle-outline" size={24} color="#fff" />
             <Text style={styles.buttonText}>Stop Recording</Text>
-          </TouchableOpacity>
-        )}
+          </View>
+        </TouchableOpacity>
+      )}
 
         {transcribedText && !isListening && (
           <TouchableOpacity
@@ -205,11 +235,26 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#f5f5f5',
   },
+  flexRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 5,
+  },
   containerDark: {
     backgroundColor: '#1a1a1a',
   },
+  buttonDisabled: {
+    opacity: 0.5,
+    backgroundColor: '#999',
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   title: {
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 20,
     color: '#333',

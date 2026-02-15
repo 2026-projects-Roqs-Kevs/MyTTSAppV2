@@ -62,11 +62,7 @@ const TTSScreen = () => {
   };
 
   return (
-    <View style={[styles.container, isDarkMode && styles.containerDark]}>
-      <Text style={[styles.title, isDarkMode && styles.textDark]}>
-        Text to Speech
-      </Text>
-      
+    <View style={[styles.container, isDarkMode && styles.containerDark]}>      
       <TextInput
         style={[
           styles.textInput,
@@ -77,7 +73,7 @@ const TTSScreen = () => {
         value={text}
         onChangeText={setText}
         multiline
-        numberOfLines={6}
+        numberOfLines={20}
       />
 
       <View style={styles.buttonContainer}>
