@@ -31,14 +31,6 @@ function App() {
           }}
         >
           <Tab.Screen
-            name="Text to Speech"
-            component={TTSScreen}
-            options={{
-              tabBarLabel: 'TTS',
-              tabBarIcon: () => null, // You can add icons later if you want
-            }}
-          />
-          <Tab.Screen
             name="Speech to Text"
             component={STTScreen}
             options={{
@@ -46,6 +38,14 @@ function App() {
               tabBarIcon: () => null, // You can add icons later if you want
             }}
           />
+            <Tab.Screen
+              name="Text to Speech"
+              component={TTSScreen}
+              options={{
+                tabBarLabel: 'TTS',
+                tabBarIcon: () => null, // You can add icons later if you want
+              }}
+            />
         </Tab.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
