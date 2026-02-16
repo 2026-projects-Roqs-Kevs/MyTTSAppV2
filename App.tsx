@@ -45,9 +45,9 @@ function App() {
             name="Saved Transcribed"
             component={TranscribeScreen}
             options={{
-              tabBarLabel: 'Text',
+              tabBarLabel: 'Transcribe',
               tabBarIcon: ({color, size}) => (
-                <Icon name="pencil-outline" size={size} color={color} />
+                <Icon name="list-circle-outline" size={size} color={color} />
               ),
             }}
           />

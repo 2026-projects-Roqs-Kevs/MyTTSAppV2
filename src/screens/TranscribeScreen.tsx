@@ -104,7 +104,7 @@ const TranscribeScreen = () => {
 
       <Text
         style={[styles.textContent, isDarkMode && styles.textDark]}
-        numberOfLines={3}>
+        numberOfLines={5}>
         {item.text}
       </Text>
 
@@ -135,9 +135,22 @@ const TranscribeScreen = () => {
 
   return (
     <View style={[styles.container, isDarkMode && styles.containerDark]}>
-      <Text style={[styles.title, isDarkMode && styles.textDark]}>
-        Saved Transcriptions
-      </Text>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          padding: 20,
+        }}>
+        <Icon name="information-circle-outline" size={20} color="#3ba7ff" />
+        <Text
+          style={[
+            styles.title,
+            isDarkMode && styles.textDark,
+            {fontSize: 12, padding: 5, fontStyle: 'italic'},
+          ]}>
+          Manage your transcription data here
+        </Text>
+      </View>
 
       {isLoading ? (
         <Text style={[styles.emptyText, isDarkMode && styles.textDark]}>
@@ -166,7 +179,7 @@ const TranscribeScreen = () => {
       <Modal
         visible={editingText !== null}
         transparent
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setEditingText(null)}>
         <View style={styles.modalOverlay}>
           <View
@@ -217,7 +230,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
     padding: 20,
     color: '#333',
   },
