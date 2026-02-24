@@ -29,6 +29,7 @@ export const SettingsProvider: React.FC<{children: ReactNode}> = ({
     autoStartRecording: false,
     language: 'tl',
     vibrateOnSpeech: false,
+    singleSpeakerMode: true,
   });
   const [isLoading, setIsLoading] = useState(true);
 

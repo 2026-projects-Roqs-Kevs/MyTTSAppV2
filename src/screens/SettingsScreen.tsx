@@ -144,6 +144,24 @@ const SettingsScreen = () => {
             trackColor={{false: '#767577', true: '#34C759'}}
           />
         </View>
+
+        <View
+          style={[styles.settingItem, isDarkMode && styles.settingItemDark]}>
+          <View style={styles.settingLeft}>
+            <Text style={[styles.settingLabel, isDarkMode && styles.textDark]}>
+              Detect only one speaker
+            </Text>
+            <Text
+              style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
+              Turn off for multi-speaker transcription
+            </Text>
+          </View>
+          <Switch
+            value={settings.singleSpeakerMode}
+            onValueChange={value => updateSettings({singleSpeakerMode: value})}
+            trackColor={{false: '#767577', true: '#34C759'}}
+          />
+        </View>
       </View>
 
       {/* Saved Transcriptions */}

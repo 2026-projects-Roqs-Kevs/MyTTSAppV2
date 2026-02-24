@@ -6,6 +6,7 @@ export interface AppSettings {
   autoStartRecording: boolean;
   language: 'en' | 'tl';
   vibrateOnSpeech: boolean;
+  singleSpeakerMode: boolean;
 }
 
 const SETTINGS_KEY = '@app_settings';
@@ -16,6 +17,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   autoStartRecording: false,
   language: 'tl',
   vibrateOnSpeech: false,
+  singleSpeakerMode: true, 
 };
 
 class SettingsService {

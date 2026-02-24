@@ -20,6 +20,7 @@ import storageService from '../services/storageService';
 import {useNavigation} from '@react-navigation/native';
 import {useSettings} from '../context/SettingsContext';
 import KeepAwake from 'react-native-keep-awake';
+import speakerDetectionService from '../services/speakerDetectionService';
 
 const STTScreen = () => {
   const [hasStartedOnce, setHasStartedOnce] = useState(false);
@@ -37,6 +38,11 @@ const STTScreen = () => {
   const lastSpeechTime = React.useRef<number>(Date.now());
   const [currentLanguage, setCurrentLanguage] = useState<'en' | 'tl'>('tl');
   const navigation = useNavigation();
+  const singleSpeakerModeRef = React.useRef(settings.singleSpeakerMode);
+
+  useEffect(() => {
+    singleSpeakerModeRef.current = settings.singleSpeakerMode;
+  }, [settings.singleSpeakerMode]);
 
   const panResponder = React.useRef(
     PanResponder.create({
@@ -145,9 +151,31 @@ const STTScreen = () => {
       setHasStartedOnce(true);
       setIsListening(true);
       setPartialText('');
+      if (!settings.singleSpeakerMode) {
+        speakerDetectionService.reset();
+      }
       await sttService.startListening(
         text => {
-          setTranscribedText(prev => (prev ? `${prev} ${text}` : text));
+          if (singleSpeakerModeRef.current) {
+            const detection = speakerDetectionService.detectSpeakerChange(text);
+            // Only transcribe if it's still person 1
+            if (detection.speaker === 1) {
+              setTranscribedText(prev => (prev ? `${prev} ${text}` : text));
+            }
+            // silently ignore person 2
+          } else {
+            // Multi-speaker mode — existing logic
+            const detection = speakerDetectionService.detectSpeakerChange(text);
+            const labeledText = `[Person ${detection.speaker}] ${text}`;
+            setTranscribedText(prev => {
+              if (!prev) return labeledText;
+              if (detection.changed) {
+                return `${prev}\n\n${labeledText}`;
+              } else {
+                return `${prev} ${text}`;
+              }
+            });
+          }
           setPartialText('');
         },
         text => {
