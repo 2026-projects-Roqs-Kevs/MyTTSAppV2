@@ -9,37 +9,44 @@ import {
   Alert,
   Platform,
   PermissionsAndroid,
+  Vibration,
   Clipboard,
 } from 'react-native';
 import sttService from '../services/sttService';
 import Icon from 'react-native-vector-icons/Ionicons';
 import storageService from '../services/storageService';
+import {useNavigation} from '@react-navigation/native';
+import {useSettings} from '../context/SettingsContext';
+import KeepAwake from 'react-native-keep-awake';
 
 const STTScreen = () => {
   const [isListening, setIsListening] = useState(false);
   const [transcribedText, setTranscribedText] = useState('');
   const [partialText, setPartialText] = useState('');
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
-  const isDarkMode = useColorScheme() === 'dark';
+  const [isInitialized, setIsInitialized] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const {settings, effectiveTheme} = useSettings();
+  const isDarkMode = effectiveTheme === 'dark';
+  const lastSpeechTime = React.useRef<number>(Date.now());
   const [currentLanguage, setCurrentLanguage] = useState<'en' | 'tl'>('tl');
+  const navigation = useNavigation();
 
   useEffect(() => {
     // Initialize Voice on component mount
     const initializeVoice = async () => {
-      try {
-        setIsInitializing(true);
-        await sttService.initialize('model-tl-ph');
-        setIsInitialized(true);
-      } catch (error) {
-        console.error('Failed to initialize Voice:', error);
-        Alert.alert(
-          'Initialization Error',
-          'Failed to initialize speech recognition.',
-        );
-      } finally {
-        setIsInitializing(false);
-      }
+      // try {
+      //   setIsInitializing(true);
+      //   await sttService.initialize('model-tl-ph');
+      //   setIsInitialized(true);
+      // } catch (error) {
+      //   console.error('Failed to initialize Voice:', error);
+      //   Alert.alert(
+      //     'Initialization Error',
+      //     'Failed to initialize speech recognition.',
+      //   );
+      // } finally {
+      //   setIsInitializing(false);
+      // }
     };
 
     initializeVoice();
@@ -49,6 +56,33 @@ const STTScreen = () => {
       sttService.cleanup();
     };
   }, []);
+
+  useEffect(() => {
+    if (settings.autoStartRecording && isInitialized && !isListening) {
+      handleStartListening();
+    }
+  }, [settings.autoStartRecording, isInitialized]);
+
+  useEffect(() => {
+    // Switch language model when settings change
+    const switchToSettingsLanguage = async () => {
+      if (settings.language !== currentLanguage && !isListening) {
+        try {
+          setIsInitializing(true);
+          const modelPath =
+            settings.language === 'en' ? 'model-en-us' : 'model-tl-ph';
+          await sttService.switchLanguage(modelPath);
+          setCurrentLanguage(settings.language);
+        } catch (error) {
+          console.error('Error switching language:', error);
+        } finally {
+          setIsInitializing(false);
+        }
+      }
+    };
+
+    switchToSettingsLanguage();
+  }, [settings.language]);
 
   const requestMicrophonePermission = async () => {
     if (Platform.OS === 'android') {
@@ -102,6 +136,18 @@ const STTScreen = () => {
         // On partial result
         text => {
           setPartialText(text);
+
+          if (settings.vibrateOnSpeech && text) {
+            const now = Date.now();
+            const timeSinceLastSpeech = now - lastSpeechTime.current;
+
+            if (timeSinceLastSpeech > 5 * 60 * 1000) {
+              // 5 minutes
+              Vibration.vibrate(200);
+            }
+
+            lastSpeechTime.current = now;
+          }
         },
       );
     } catch (error) {
@@ -168,27 +214,20 @@ const STTScreen = () => {
 
   return (
     <View style={[styles.container, isDarkMode && styles.containerDark]}>
+      {isListening && <KeepAwake />}
+      <TouchableOpacity
+        style={styles.settingsIcon}
+        onPress={() => navigation.navigate('Settings' as never)}>
+        <Icon
+          name="settings-outline"
+          size={28}
+          color={isDarkMode ? '#fff' : '#333'}
+        />
+      </TouchableOpacity>
       <View style={[styles.flexRow]}>
         <Text style={[styles.title, isDarkMode && styles.textDark]}>
           Switch Button:
         </Text>
-
-        <TouchableOpacity
-          style={[
-            styles.languageButton,
-            isDarkMode && styles.languageButtonDark,
-          ]}
-          onPress={handleSwitchLanguage}
-          disabled={isListening || isInitializing}>
-          <Text
-            style={[styles.languageButtonText, isDarkMode && styles.textDark]}>
-            {isInitializing
-              ? 'Loading...'
-              : `Language: ${
-                  currentLanguage === 'en' ? 'English 🇺🇸' : 'Tagalog 🇵🇭'
-                }`}
-          </Text>
-        </TouchableOpacity>
       </View>
       <View style={styles.flexRow}>
         <View style={styles.statusContainer}>
@@ -218,7 +257,12 @@ const STTScreen = () => {
       <ScrollView
         style={[styles.textContainer, isDarkMode && styles.textContainerDark]}
         contentContainerStyle={styles.textContent}>
-        <Text style={[styles.transcribedText, isDarkMode && styles.textDark]}>
+        <Text
+          style={[
+            styles.transcribedText,
+            isDarkMode && styles.textDark,
+            {fontSize: settings.textSize}, // Add this
+          ]}>
           {transcribedText || '...'}
         </Text>
         {partialText && (
@@ -319,6 +363,13 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: '#34C759',
+  },
+  settingsIcon: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 10,
+    padding: 8,
   },
   buttonContent: {
     flexDirection: 'row',

@@ -14,13 +14,15 @@ import {useFocusEffect} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import storageService, {SavedText} from '../services/storageService';
 import {Clipboard} from 'react-native';
+import {useSettings} from '../context/SettingsContext';
 
 const TranscribeScreen = () => {
   const [savedTexts, setSavedTexts] = useState<SavedText[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingText, setEditingText] = useState<SavedText | null>(null);
   const [editValue, setEditValue] = useState('');
-  const isDarkMode = useColorScheme() === 'dark';
+  const {settings, effectiveTheme} = useSettings();
+  const isDarkMode = effectiveTheme === 'dark';
 
   useFocusEffect(
     useCallback(() => {
