@@ -11,6 +11,8 @@ import {
   PermissionsAndroid,
   Vibration,
   Clipboard,
+  PanResponder,
+  TextInput,
 } from 'react-native';
 import sttService from '../services/sttService';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -20,16 +22,38 @@ import {useSettings} from '../context/SettingsContext';
 import KeepAwake from 'react-native-keep-awake';
 
 const STTScreen = () => {
+  const [hasStartedOnce, setHasStartedOnce] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [transcribedText, setTranscribedText] = useState('');
   const [partialText, setPartialText] = useState('');
   const [isInitialized, setIsInitialized] = useState(true);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [topPanelFlex, setTopPanelFlex] = useState(1);
+  const [bottomPanelFlex, setBottomPanelFlex] = useState(1);
+  const dividerY = React.useRef(0);
+  const containerHeight = React.useRef(0);
   const {settings, effectiveTheme} = useSettings();
   const isDarkMode = effectiveTheme === 'dark';
   const lastSpeechTime = React.useRef<number>(Date.now());
   const [currentLanguage, setCurrentLanguage] = useState<'en' | 'tl'>('tl');
   const navigation = useNavigation();
+
+  const panResponder = React.useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: (_, gestureState) => {
+        dividerY.current = gestureState.y0;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        const totalHeight = containerHeight.current;
+        if (!totalHeight) return;
+        const newTopFlex = gestureState.moveY / totalHeight;
+        const clamped = Math.min(Math.max(newTopFlex, 0.2), 0.8);
+        setTopPanelFlex(clamped);
+        setBottomPanelFlex(1 - clamped);
+      },
+    }),
+  ).current;
 
   useEffect(() => {
     // Initialize Voice on component mount
@@ -112,40 +136,27 @@ const STTScreen = () => {
       Alert.alert('Error', 'Speech recognition is not initialized yet');
       return;
     }
-
     const hasPermission = await requestMicrophonePermission();
     if (!hasPermission) {
-      Alert.alert(
-        'Permission Denied',
-        'Microphone permission is required for speech recognition',
-      );
+      Alert.alert('Permission Denied', 'Microphone permission is required');
       return;
     }
-
     try {
+      setHasStartedOnce(true);
       setIsListening(true);
-      setTranscribedText('');
       setPartialText('');
-
       await sttService.startListening(
-        // On final result
         text => {
           setTranscribedText(prev => (prev ? `${prev} ${text}` : text));
           setPartialText('');
         },
-        // On partial result
         text => {
           setPartialText(text);
-
           if (settings.vibrateOnSpeech && text) {
             const now = Date.now();
-            const timeSinceLastSpeech = now - lastSpeechTime.current;
-
-            if (timeSinceLastSpeech > 5 * 60 * 1000) {
-              // 5 minutes
+            if (now - lastSpeechTime.current > 5 * 60 * 1000) {
               Vibration.vibrate(200);
             }
-
             lastSpeechTime.current = now;
           }
         },
@@ -215,126 +226,159 @@ const STTScreen = () => {
   return (
     <View style={[styles.container, isDarkMode && styles.containerDark]}>
       {isListening && <KeepAwake />}
-      <TouchableOpacity
-        style={styles.settingsIcon}
-        onPress={() => navigation.navigate('Settings' as never)}>
-        <Icon
-          name="settings-outline"
-          size={28}
-          color={isDarkMode ? '#fff' : '#333'}
-        />
-      </TouchableOpacity>
-      <View style={[styles.flexRow]}>
-        <Text style={[styles.title, isDarkMode && styles.textDark]}>
-          Switch Button:
-        </Text>
-      </View>
-      <View style={styles.flexRow}>
-        <View style={styles.statusContainer}>
-          <View
-            style={[
-              styles.statusIndicator,
-              isListening && styles.statusIndicatorActive,
-            ]}
-          />
-          <Text style={[styles.statusText, isDarkMode && styles.textDark]}>
-            {isListening ? 'Listening...' : 'Ready'}
-          </Text>
-        </View>
-        <View style={[styles.statusContainer, {gap: 5}]}>
-          <Icon name="information-circle-outline" size={16} color="#3ba7ff" />
-          <Text
-            style={[
-              styles.statusText,
-              isDarkMode && styles.textDark,
-              {fontSize: 12},
-            ]}>
-            Speak loudly and clearly
-          </Text>
-        </View>
-      </View>
 
-      <ScrollView
-        style={[styles.textContainer, isDarkMode && styles.textContainerDark]}
-        contentContainerStyle={styles.textContent}>
-        <Text
-          style={[
-            styles.transcribedText,
-            isDarkMode && styles.textDark,
-            {fontSize: settings.textSize}, // Add this
-          ]}>
-          {transcribedText || '...'}
-        </Text>
-        {partialText && (
-          <Text
-            style={[styles.partialText, isDarkMode && styles.partialTextDark]}>
-            {partialText}
-          </Text>
-        )}
-      </ScrollView>
-      <View style={styles.buttonContainer}>
-        {!isListening ? (
+      {/* SCREEN 1 — Idle, only shown before first recording */}
+      {!hasStartedOnce && (
+        <View style={styles.idleContainer}>
           <TouchableOpacity
-            style={[
-              styles.button,
-              styles.startButton,
-              (isInitializing || !isInitialized) && styles.buttonDisabled,
-            ]}
             onPress={handleStartListening}
-            disabled={isInitializing || !isInitialized}>
-            <View style={styles.buttonContent}>
-              <Icon name="mic-outline" size={24} color="#fff" />
-              <Text style={styles.buttonText}>
-                {isInitializing ? 'Initializing...' : 'Start Recording'}
-              </Text>
-            </View>
+            disabled={isInitializing}
+            style={styles.micButton}>
+            <Icon name="mic" size={64} color="#34C759" />
           </TouchableOpacity>
-        ) : (
+          <Text style={[styles.idleText, isDarkMode && styles.textDark]}>
+            {isInitializing ? 'Initializing...' : 'Ready to transcribe'}
+          </Text>
           <TouchableOpacity
-            style={[styles.button, styles.stopButton]}
-            onPress={handleStopListening}>
-            <View style={styles.buttonContent}>
-              <Icon name="stop-circle-outline" size={24} color="#fff" />
-              <Text style={styles.buttonText}>Stop Recording</Text>
-            </View>
+            style={styles.idleSettingsIcon}
+            onPress={() => navigation.navigate('Settings' as never)}>
+            <Icon
+              name="settings-outline"
+              size={28}
+              color={isDarkMode ? '#fff' : '#333'}
+            />
           </TouchableOpacity>
-        )}
+        </View>
+      )}
 
-        {transcribedText && !isListening && (
-          <View style={styles.actionButtonsRow}>
-            <TouchableOpacity
-              style={[styles.button, styles.actionButton, styles.saveButton]}
-              onPress={handleSave}>
-              <View style={styles.buttonContent}>
-                <Icon name="save-outline" size={20} color="#34C759" />
-                <Text style={[styles.actionButtonText, styles.saveButtonText]}>
-                  Save
-                </Text>
-              </View>
-            </TouchableOpacity>
+      {/* SCREEN 2 — Active, shown after first recording starts */}
+      {hasStartedOnce && (
+        <View
+          style={styles.activeContainer}
+          onLayout={e => {
+            containerHeight.current = e.nativeEvent.layout.height;
+          }}>
+          {/* Settings icon */}
+          <TouchableOpacity
+            style={styles.settingsIcon}
+            onPress={() => navigation.navigate('Settings' as never)}>
+            <Icon
+              name="settings-outline"
+              size={28}
+              color={isDarkMode ? '#fff' : '#333'}
+            />
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.button, styles.actionButton, styles.copyButton]}
-              onPress={handleCopy}>
-              <View style={styles.buttonContent}>
-                <Icon name="copy-outline" size={20} color="#007AFF" />
-                <Text style={styles.actionButtonText}>Copy</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.button, styles.actionButton, styles.clearButton]}
-              onPress={handleClear}>
-              <View style={styles.buttonContent}>
-                <Icon name="trash-outline" size={20} color="#FF3B30" />
-                <Text style={[styles.actionButtonText, styles.clearButtonText]}>
-                  Clear
-                </Text>
-              </View>
-            </TouchableOpacity>
+          {/* TOP PANEL — partialText */}
+          <View style={{flex: topPanelFlex}}>
+            <Text style={[styles.statusLabel, isDarkMode && styles.textDark]}>
+              {isListening ? 'Listening...' : 'Ready'}
+            </Text>
+            <ScrollView
+              style={[
+                styles.textContainer,
+                isDarkMode && styles.textContainerDark,
+              ]}
+              contentContainerStyle={styles.textContent}>
+              <Text
+                style={[
+                  styles.partialText,
+                  isDarkMode && styles.partialTextDark,
+                  {fontSize: settings.textSize},
+                ]}>
+                {partialText || '...'}
+              </Text>
+            </ScrollView>
           </View>
-        )}
-      </View>
+
+          {/* DIVIDER */}
+          <View {...panResponder.panHandlers} style={styles.divider}>
+            <Icon
+              name="reorder-three-outline"
+              size={24}
+              color={isDarkMode ? '#aaa' : '#555'}
+            />
+          </View>
+
+          {/* BOTTOM PANEL — transcribedText (editable) + start/stop button */}
+          <View style={{flex: bottomPanelFlex}}>
+            <View style={styles.bottomPanelHeader}>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  isListening ? styles.stopButton : styles.startButton,
+                  isInitializing && styles.buttonDisabled,
+                ]}
+                onPress={
+                  isListening ? handleStopListening : handleStartListening
+                }
+                disabled={isInitializing}>
+                <Icon
+                  name={isListening ? 'stop-circle-outline' : 'mic-outline'}
+                  size={22}
+                  color="#fff"
+                />
+                <Text style={styles.toggleButtonText}>
+                  {isInitializing
+                    ? 'Initializing...'
+                    : isListening
+                    ? 'Stop'
+                    : 'Start'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={[
+                styles.transcribedInput,
+                isDarkMode && styles.transcribedInputDark,
+                {fontSize: settings.textSize},
+              ]}
+              multiline
+              value={transcribedText}
+              onChangeText={setTranscribedText}
+              placeholder="Transcribed text will appear here..."
+              placeholderTextColor={isDarkMode ? '#666' : '#aaa'}
+            />
+          </View>
+
+          {/* ACTION BUTTONS — only when stopped and has text */}
+          {!isListening && transcribedText ? (
+            <View style={styles.actionButtonsRow}>
+              <TouchableOpacity
+                style={[styles.button, styles.actionButton, styles.saveButton]}
+                onPress={handleSave}>
+                <View style={styles.buttonContent}>
+                  <Icon name="save-outline" size={20} color="#34C759" />
+                  <Text
+                    style={[styles.actionButtonText, styles.saveButtonText]}>
+                    Save
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.actionButton, styles.copyButton]}
+                onPress={handleCopy}>
+                <View style={styles.buttonContent}>
+                  <Icon name="copy-outline" size={20} color="#007AFF" />
+                  <Text style={styles.actionButtonText}>Copy</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.actionButton, styles.clearButton]}
+                onPress={handleClear}>
+                <View style={styles.buttonContent}>
+                  <Icon name="trash-outline" size={20} color="#FF3B30" />
+                  <Text
+                    style={[styles.actionButtonText, styles.clearButtonText]}>
+                    Clear
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+        </View>
+      )}
     </View>
   );
 };
@@ -498,6 +542,82 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#007AFF',
+  },
+  idleContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  idleText: {
+    fontSize: 18,
+    color: '#333',
+    fontWeight: '500',
+  },
+  idleSettingsIcon: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    padding: 8,
+  },
+  micButton: {
+    padding: 24,
+    borderRadius: 80,
+    borderWidth: 2,
+    borderColor: '#34C759',
+  },
+  activeContainer: {
+    flex: 1,
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  statusLabel: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 8,
+  },
+  divider: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    marginVertical: 4,
+    backgroundColor: 'transparent',
+  },
+  bottomPanelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 8,
+  },
+  toggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  toggleButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  transcribedInput: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    padding: 16,
+    fontSize: 16,
+    color: '#333',
+    textAlignVertical: 'top',
+  },
+  transcribedInputDark: {
+    backgroundColor: '#2a2a2a',
+    borderColor: '#444',
+    color: '#fff',
   },
 });
 
