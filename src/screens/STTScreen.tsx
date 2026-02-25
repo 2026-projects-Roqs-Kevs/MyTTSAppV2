@@ -188,6 +188,10 @@ const STTScreen = () => {
             lastSpeechTime.current = now;
           }
         },
+        pitch => {
+          // NEW — feed real pitch data to speaker detection
+          speakerDetectionService.receivePitch(pitch);
+        },
       );
     } catch (error) {
       console.error('Error starting listening:', error);

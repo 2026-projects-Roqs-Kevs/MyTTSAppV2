@@ -34,7 +34,8 @@ class STTService {
 
   async startListening(
     onResult: (text: string) => void,
-    onPartialResult?: (text: string) => void
+    onPartialResult?: (text: string) => void,
+    onPitchDetected?: (pitch: number) => void  // NEW
   ) {
     if (!this.isInitialized) {
       throw new Error('STT Service not initialized. Call initialize() first.');
@@ -65,6 +66,19 @@ class STTService {
           }
         });
         this.listeners.push(partialListener);
+      }
+
+      // NEW — listen to pitch detection events
+      if (onPitchDetected) {
+        const pitchListener = voskEmitter.addListener('onPitchDetected', (data: string) => {
+          console.log('>>> onPitchDetected raw:', data); // ADD THIS
+          const pitch = parseFloat(data);
+          if (!isNaN(pitch) && pitch > 0) {
+            console.log('>>> pitch value:', pitch); // ADD THIS
+            onPitchDetected(pitch);
+          }
+        });
+        this.listeners.push(pitchListener);
       }
 
       const errorListener = voskEmitter.addListener('onError', (error: string) => {

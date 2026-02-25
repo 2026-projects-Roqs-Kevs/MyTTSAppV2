@@ -42,6 +42,18 @@ const TranscribeScreen = () => {
     }
   };
 
+  const handleExport = async (item: SavedText) => {
+    try {
+      const filePath = await storageService.exportToTxt(item);
+      Alert.alert(
+        'Success',
+        `Saved to Downloads folder!\n\nFile: ${filePath.split('/').pop()}`,
+      );
+    } catch (error) {
+      Alert.alert('Error', 'Failed to export file');
+    }
+  };
+
   const handleDelete = (id: string) => {
     Alert.alert('Delete Text', 'Are you sure you want to delete this text?', [
       {text: 'Cancel', style: 'cancel'},
@@ -123,6 +135,13 @@ const TranscribeScreen = () => {
           onPress={() => handleCopy(item.text)}>
           <Icon name="copy-outline" size={20} color="#34C759" />
           <Text style={[styles.actionBtnText, {color: '#34C759'}]}>Copy</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionBtn}
+          onPress={() => handleExport(item)}>
+          <Icon name="download-outline" size={20} color="#FF9500" />
+          <Text style={[styles.actionBtnText, {color: '#FF9500'}]}>Export</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
