@@ -1,44 +1,54 @@
-import React, {useEffect} from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  Image,
-  useColorScheme,
-} from 'react-native';
+import React, {useEffect, useRef} from 'react';
+import {View, Text, StyleSheet, Image, Animated, Easing} from 'react-native';
+import {useSettings} from '../context/SettingsContext';
 
 interface Props {
   onComplete: () => void;
 }
 
 const WelcomeScreen: React.FC<Props> = ({onComplete}) => {
-  const isDarkMode = useColorScheme() === 'dark';
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const {effectiveTheme} = useSettings();
+  const isDarkMode = effectiveTheme === 'dark';
 
   useEffect(() => {
-    // Simulate initialization (services are already initializing in background)
+    Animated.loop(
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: 2500,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    ).start();
+
     const timer = setTimeout(() => {
       onComplete();
-    }, 2000); // 2 second minimum display time
+    }, 5000);
 
     return () => clearTimeout(timer);
   }, []);
 
+  const rotate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
   return (
     <View style={[styles.container, isDarkMode && styles.containerDark]}>
-      {/* Logo placeholder - replace with actual logo later */}
       <View style={styles.logoContainer}>
-        <Text style={[styles.logoText, isDarkMode && styles.textDark]}>🎤</Text>
+        <Image
+          source={require('../../assets/bglogo.png')}
+          style={styles.logo}
+        />
       </View>
 
       <Text style={[styles.title, isDarkMode && styles.textDark]}>
         Welcome to EchoLinK
       </Text>
 
-      <ActivityIndicator
-        size="large"
-        color={isDarkMode ? '#fff' : '#007AFF'}
-        style={styles.loader}
+      <Animated.Image
+        source={require('../../assets/loading-el.png')}
+        style={[styles.loadingImage, {transform: [{rotate}]}]}
       />
     </View>
   );
@@ -57,8 +67,10 @@ const styles = StyleSheet.create({
   logoContainer: {
     marginBottom: 30,
   },
-  logoText: {
-    fontSize: 80,
+  logo: {
+    width: 200,
+    height: 200,
+    resizeMode: 'contain',
   },
   title: {
     fontSize: 28,
@@ -69,7 +81,10 @@ const styles = StyleSheet.create({
   textDark: {
     color: '#fff',
   },
-  loader: {
+  loadingImage: {
+    width: 40,
+    height: 40,
+    resizeMode: 'contain',
     marginTop: 20,
   },
 });

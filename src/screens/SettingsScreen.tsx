@@ -214,7 +214,7 @@ const SettingsScreen = () => {
       </View>
 
       {/* Text Size Modal */}
-      <Modal visible={showTextSizeModal} transparent animationType="slide">
+      <Modal visible={showTextSizeModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View
             style={[
@@ -264,7 +264,7 @@ const SettingsScreen = () => {
               <TouchableOpacity
                 style={[styles.modalBtn, styles.resetBtn]}
                 onPress={() => updateSettings({textSize: 16})}>
-                <Text style={styles.resetBtnText}>Reset to Default (16)</Text>
+                <Text style={styles.resetBtnText}>Reset</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -278,7 +278,7 @@ const SettingsScreen = () => {
       </Modal>
 
       {/* Theme Modal */}
-      <Modal visible={showThemeModal} transparent animationType="slide">
+      <Modal visible={showThemeModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View
             style={[
@@ -315,16 +315,27 @@ const SettingsScreen = () => {
             ))}
 
             <TouchableOpacity
-              style={[styles.modalBtn, styles.cancelBtn]}
+              style={{
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#c5b9b9',
+                padding: 10,
+                marginVertical: 10,
+                borderRadius: 5,
+              }}
               onPress={() => setShowThemeModal(false)}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
+              <View>
+                <Text style={{color: '#3a3737', fontWeight: 'bold'}}>
+                  Close
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
       {/* Language Modal */}
-      <Modal visible={showLanguageModal} transparent animationType="slide">
+      <Modal visible={showLanguageModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View
             style={[
@@ -360,9 +371,20 @@ const SettingsScreen = () => {
             ))}
 
             <TouchableOpacity
-              style={[styles.modalBtn, styles.cancelBtn]}
+              style={{
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#c5b9b9',
+                padding: 10,
+                marginVertical: 10,
+                borderRadius: 5,
+              }}
               onPress={() => setShowLanguageModal(false)}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
+              <View>
+                <Text style={{color: '#3a3737', fontWeight: 'bold'}}>
+                  Close
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
@@ -468,7 +490,8 @@ const styles = StyleSheet.create({
   },
   modalBtn: {
     flex: 1,
-    padding: 14,
+    padding: 20,
+    marginVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
   },
@@ -489,12 +512,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   cancelBtn: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#ff2222',
   },
   cancelBtnText: {
-    color: '#666',
+    color: '#353030',
     fontSize: 16,
-    fontWeight: '600',
   },
   optionItem: {
     flexDirection: 'row',

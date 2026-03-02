@@ -15,6 +15,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import storageService, {SavedText} from '../services/storageService';
 import {Clipboard} from 'react-native';
 import {useSettings} from '../context/SettingsContext';
+import {ScrollView} from 'react-native';
 
 const TranscribeScreen = () => {
   const [savedTexts, setSavedTexts] = useState<SavedText[]>([]);
@@ -212,14 +213,18 @@ const TranscribeScreen = () => {
               Edit Text
             </Text>
 
-            <TextInput
-              style={[styles.textInput, isDarkMode && styles.textInputDark]}
-              value={editValue}
-              onChangeText={setEditValue}
-              multiline
-              numberOfLines={6}
-              textAlignVertical="top"
-            />
+            <ScrollView
+              style={styles.textInputScroll}
+              keyboardShouldPersistTaps="handled">
+              <TextInput
+                style={[styles.textInput, isDarkMode && styles.textInputDark]}
+                value={editValue}
+                onChangeText={setEditValue}
+                multiline
+                numberOfLines={6}
+                textAlignVertical="top"
+              />
+            </ScrollView>
 
             <View style={styles.modalActions}>
               <TouchableOpacity
@@ -288,6 +293,10 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 4,
   },
+  textInputScroll: {
+    maxHeight: 300,
+    marginBottom: 16,
+  },
   englishBadge: {
     backgroundColor: '#E3F2FD',
     color: '#1976D2',
@@ -351,6 +360,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 20,
+    maxHeight: '80%',
   },
   modalContentDark: {
     backgroundColor: '#2a2a2a',
@@ -368,7 +378,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     minHeight: 120,
     color: '#333',
-    marginBottom: 16,
   },
   textInputDark: {
     backgroundColor: '#1a1a1a',

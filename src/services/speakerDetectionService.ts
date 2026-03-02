@@ -7,10 +7,10 @@ class SpeakerDetectionService {
   private currentSpeaker: number = 1;
   private previousCharacteristics: VoiceCharacteristics | null = null;
   private speakerHistory: number[] = [];
-  private readonly CHANGE_THRESHOLD = 0.15;
+  private readonly CHANGE_THRESHOLD = 0.25;
 
   private pitchBuffer: number[] = [];
-  private readonly PITCH_BUFFER_MAX = 10;
+  private readonly PITCH_BUFFER_MAX = 20;
 
   receivePitch(pitch: number) {
     // Filter out unrealistic pitch values

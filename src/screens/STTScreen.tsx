@@ -303,9 +303,9 @@ const STTScreen = () => {
 
           {/* TOP PANEL — partialText */}
           <View style={{flex: topPanelFlex}}>
-            <Text style={[styles.statusLabel, isDarkMode && styles.textDark]}>
+            {/* <Text style={[styles.statusLabel, isDarkMode && styles.textDark]}>
               {isListening ? 'Listening...' : 'Ready'}
-            </Text>
+            </Text> */}
             <ScrollView
               style={[
                 styles.textContainer,
@@ -318,48 +318,50 @@ const STTScreen = () => {
                   isDarkMode && styles.partialTextDark,
                   {fontSize: settings.textSize},
                 ]}>
-                {partialText || '...'}
+                {partialText || (isListening ? 'Listening...' : '...')}
               </Text>
             </ScrollView>
           </View>
 
           {/* DIVIDER */}
           <View {...panResponder.panHandlers} style={styles.divider}>
-            <Icon
-              name="reorder-three-outline"
-              size={24}
-              color={isDarkMode ? '#aaa' : '#555'}
-            />
+            <View style={{width: 100}}></View>
+            <View
+              style={{
+                backgroundColor: isDarkMode ? '#756f6f' : '#ccc1c1',
+                borderRadius: 5,
+              }}>
+              <Icon
+                name="reorder-three-outline"
+                size={34}
+                color={isDarkMode ? '#aaa' : '#555'}
+              />
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                isListening ? styles.stopButton : styles.startButton,
+                isInitializing && styles.buttonDisabled,
+              ]}
+              onPress={isListening ? handleStopListening : handleStartListening}
+              disabled={isInitializing}>
+              <Icon
+                name={isListening ? 'stop-circle-outline' : 'mic-outline'}
+                size={22}
+                color="#fff"
+              />
+              <Text style={styles.toggleButtonText}>
+                {isInitializing
+                  ? 'Initializing...'
+                  : isListening
+                  ? 'Stop'
+                  : 'Start'}
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {/* BOTTOM PANEL — transcribedText (editable) + start/stop button */}
           <View style={{flex: bottomPanelFlex}}>
-            <View style={styles.bottomPanelHeader}>
-              <TouchableOpacity
-                style={[
-                  styles.toggleButton,
-                  isListening ? styles.stopButton : styles.startButton,
-                  isInitializing && styles.buttonDisabled,
-                ]}
-                onPress={
-                  isListening ? handleStopListening : handleStartListening
-                }
-                disabled={isInitializing}>
-                <Icon
-                  name={isListening ? 'stop-circle-outline' : 'mic-outline'}
-                  size={22}
-                  color="#fff"
-                />
-                <Text style={styles.toggleButtonText}>
-                  {isInitializing
-                    ? 'Initializing...'
-                    : isListening
-                    ? 'Stop'
-                    : 'Start'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
             <TextInput
               style={[
                 styles.transcribedInput,
@@ -370,7 +372,7 @@ const STTScreen = () => {
               value={transcribedText}
               onChangeText={setTranscribedText}
               placeholder="Transcribed text will appear here..."
-              placeholderTextColor={isDarkMode ? '#666' : '#aaa'}
+              placeholderTextColor={isDarkMode ? '#827e7e' : '#aaa'}
             />
           </View>
 
@@ -442,10 +444,8 @@ const styles = StyleSheet.create({
   },
   settingsIcon: {
     position: 'absolute',
-    top: 20,
     right: 20,
     zIndex: 10,
-    padding: 8,
   },
   buttonContent: {
     flexDirection: 'row',
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 16,
-    color: '#666',
+    color: '#827e7e',
   },
   textContainer: {
     flex: 1,
@@ -486,7 +486,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#ddd',
-    marginBottom: 20,
   },
   textContainerDark: {
     backgroundColor: '#2a2a2a',
@@ -508,7 +507,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   partialTextDark: {
-    color: '#666',
+    color: '#827e7e',
   },
   buttonContainer: {
     gap: 12,
@@ -559,6 +558,7 @@ const styles = StyleSheet.create({
   },
   actionButtonsRow: {
     flexDirection: 'row',
+    paddingTop: 8,
     gap: 12,
   },
   actionButton: {
@@ -600,9 +600,7 @@ const styles = StyleSheet.create({
   },
   activeContainer: {
     flex: 1,
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingTop: 35,
   },
   statusLabel: {
     fontSize: 22,
@@ -612,15 +610,15 @@ const styles = StyleSheet.create({
   },
   divider: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    marginVertical: 4,
+    justifyContent: 'space-between',
     backgroundColor: 'transparent',
+    flexDirection: 'row',
+    marginVertical: 8,
   },
   bottomPanelHeader: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   toggleButton: {
     flexDirection: 'row',
