@@ -21,6 +21,10 @@ class STTService {
     }
   }
 
+  getIsInitialized(): boolean {
+    return this.isInitialized;
+  }
+
   async switchLanguage(modelPath: string) {
     try {
       await this.cleanup();

@@ -1,12 +1,8 @@
-import React, {useEffect, useRef} from 'react';
+import React, {useRef, useEffect} from 'react';
 import {View, Text, StyleSheet, Image, Animated, Easing} from 'react-native';
 import {useSettings} from '../context/SettingsContext';
 
-interface Props {
-  onComplete: () => void;
-}
-
-const WelcomeScreen: React.FC<Props> = ({onComplete}) => {
+const WelcomeScreen: React.FC = () => {
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const {effectiveTheme} = useSettings();
   const isDarkMode = effectiveTheme === 'dark';
@@ -20,12 +16,6 @@ const WelcomeScreen: React.FC<Props> = ({onComplete}) => {
         useNativeDriver: true,
       }),
     ).start();
-
-    const timer = setTimeout(() => {
-      onComplete();
-    }, 5000);
-
-    return () => clearTimeout(timer);
   }, []);
 
   const rotate = rotateAnim.interpolate({
@@ -41,11 +31,9 @@ const WelcomeScreen: React.FC<Props> = ({onComplete}) => {
           style={styles.logo}
         />
       </View>
-
       <Text style={[styles.title, isDarkMode && styles.textDark]}>
         Welcome to EchoLinK
       </Text>
-
       <Animated.Image
         source={require('../../assets/loading-el.png')}
         style={[styles.loadingImage, {transform: [{rotate}]}]}

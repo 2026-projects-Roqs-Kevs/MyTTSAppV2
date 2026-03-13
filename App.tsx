@@ -21,17 +21,20 @@ function App() {
 
   const initializeServices = async () => {
     try {
-      // Load saved settings to get the language
       const savedSettings = await settingsService.getSettings();
       const modelPath =
         savedSettings.language === 'en' ? 'model-en-us' : 'model-tl-ph';
 
-      // Initialize STT with saved language
-      await sttService.initialize(modelPath);
-
-      setIsReady(true);
+      // Wait for BOTH minimum 2 seconds AND Vosk to initialize
+      await Promise.all([
+        sttService.initialize(modelPath),
+        new Promise(resolve => setTimeout(resolve, 2000)),
+      ]);
     } catch (error) {
       console.error('Failed to initialize services:', error);
+      // Still wait minimum 2 seconds even on error
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    } finally {
       setIsReady(true);
     }
   };
@@ -39,7 +42,7 @@ function App() {
   return (
     <SettingsProvider>
       {!isReady ? (
-        <WelcomeScreen onComplete={() => setIsReady(true)} />
+        <WelcomeScreen />
       ) : (
         <NavigationContainer>
           <Stack.Navigator

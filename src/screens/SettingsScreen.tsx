@@ -165,7 +165,7 @@ const SettingsScreen = () => {
       </View>
 
       {/* Saved Transcriptions */}
-      <View style={styles.section}>
+      {/* <View style={styles.section}>
         <TouchableOpacity
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
           onPress={() => navigation.navigate('Transcriptions' as never)}>
@@ -182,7 +182,7 @@ const SettingsScreen = () => {
           </View>
           <Icon name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
-      </View>
+      </View> */}
 
       {/* About Section */}
       <View style={styles.section}>
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
   },
   optionItemSelected: {
-    backgroundColor: '#f0f8ff',
+    backgroundColor: '#5a677288',
   },
   optionText: {
     fontSize: 16,

@@ -39,6 +39,7 @@ const STTScreen = () => {
   const [currentLanguage, setCurrentLanguage] = useState<'en' | 'tl'>('tl');
   const navigation = useNavigation();
   const singleSpeakerModeRef = React.useRef(settings.singleSpeakerMode);
+  const [replyText, setReplyText] = useState('');
 
   useEffect(() => {
     singleSpeakerModeRef.current = settings.singleSpeakerMode;
@@ -62,28 +63,25 @@ const STTScreen = () => {
   ).current;
 
   useEffect(() => {
-    // Initialize Voice on component mount
-    const initializeVoice = async () => {
-      // try {
-      //   setIsInitializing(true);
-      //   await sttService.initialize('model-tl-ph');
-      //   setIsInitialized(true);
-      // } catch (error) {
-      //   console.error('Failed to initialize Voice:', error);
-      //   Alert.alert(
-      //     'Initialization Error',
-      //     'Failed to initialize speech recognition.',
-      //   );
-      // } finally {
-      //   setIsInitializing(false);
-      // }
+    const reinitialize = async () => {
+      if (!sttService.getIsInitialized()) {
+        try {
+          setIsInitializing(true);
+          const modelPath =
+            currentLanguage === 'en' ? 'model-en-us' : 'model-tl-ph';
+          await sttService.initialize(modelPath);
+        } catch (error) {
+          console.error('Failed to reinitialize STT:', error);
+        } finally {
+          setIsInitializing(false);
+        }
+      }
     };
 
-    initializeVoice();
+    reinitialize();
 
-    // Cleanup on unmount
     return () => {
-      sttService.cleanup();
+      // removed cleanup here — App.tsx manages Vosk lifecycle now
     };
   }, []);
 
@@ -135,6 +133,17 @@ const STTScreen = () => {
       }
     }
     return true;
+  };
+
+  const handleCopyReply = () => {
+    if (replyText) {
+      Clipboard.setString(replyText);
+      Alert.alert('Success', 'Reply copied to clipboard!');
+    }
+  };
+
+  const handleClearReply = () => {
+    setReplyText('');
   };
 
   const handleStartListening = async () => {
@@ -316,16 +325,52 @@ const STTScreen = () => {
                 style={[
                   styles.partialText,
                   isDarkMode && styles.partialTextDark,
-                  {fontSize: settings.textSize},
+                  {fontSize: settings.textSize - 2},
                 ]}>
                 {partialText || (isListening ? 'Listening...' : '...')}
               </Text>
+
+              {/* Transcribed text — not editable */}
+              <TextInput
+                style={[
+                  styles.transcribedInput,
+                  isDarkMode && styles.transcribedInputDark,
+                  {
+                    fontSize: settings.textSize,
+                    flex: 1,
+                    borderColor: '#ffffff00',
+                    padding: 0,
+                    marginTop: 20,
+                  },
+                ]}
+                multiline
+                value={transcribedText}
+                onChangeText={setTranscribedText}
+                editable={false} // set to true to make editable
+                placeholder="-"
+                placeholderTextColor={isDarkMode ? '#827e7e' : '#aaa'}
+              />
             </ScrollView>
           </View>
 
           {/* DIVIDER */}
           <View {...panResponder.panHandlers} style={styles.divider}>
-            <View style={{width: 100}}></View>
+            {!isListening && transcribedText ? (
+              <View style={styles.topActionRow}>
+                <TouchableOpacity
+                  style={styles.smallActionBtn}
+                  onPress={handleCopy}>
+                  <Icon name="copy-outline" size={18} color="#007AFF" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.smallActionBtn}
+                  onPress={handleClear}>
+                  <Icon name="trash-outline" size={18} color="#FF3B30" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={{width: 100}}></View>
+            )}
             <View
               style={{
                 backgroundColor: isDarkMode ? '#756f6f' : '#ccc1c1',
@@ -366,20 +411,20 @@ const STTScreen = () => {
               style={[
                 styles.transcribedInput,
                 isDarkMode && styles.transcribedInputDark,
-                {fontSize: settings.textSize},
+                {fontSize: settings.textSize, flex: 1},
               ]}
               multiline
-              value={transcribedText}
-              onChangeText={setTranscribedText}
-              placeholder="Transcribed text will appear here..."
+              value={replyText}
+              onChangeText={setReplyText}
+              placeholder="Type your reply here..."
               placeholderTextColor={isDarkMode ? '#827e7e' : '#aaa'}
             />
           </View>
 
           {/* ACTION BUTTONS — only when stopped and has text */}
-          {!isListening && transcribedText ? (
+          {replyText ? (
             <View style={styles.actionButtonsRow}>
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 style={[styles.button, styles.actionButton, styles.saveButton]}
                 onPress={handleSave}>
                 <View style={styles.buttonContent}>
@@ -389,25 +434,16 @@ const STTScreen = () => {
                     Save
                   </Text>
                 </View>
+              </TouchableOpacity> */}
+              <TouchableOpacity
+                style={styles.smallActionBtn}
+                onPress={handleCopyReply}>
+                <Icon name="copy-outline" size={18} color="#007AFF" />
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.button, styles.actionButton, styles.copyButton]}
-                onPress={handleCopy}>
-                <View style={styles.buttonContent}>
-                  <Icon name="copy-outline" size={20} color="#007AFF" />
-                  <Text style={styles.actionButtonText}>Copy</Text>
-                </View>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.actionButton, styles.clearButton]}
-                onPress={handleClear}>
-                <View style={styles.buttonContent}>
-                  <Icon name="trash-outline" size={20} color="#FF3B30" />
-                  <Text
-                    style={[styles.actionButtonText, styles.clearButtonText]}>
-                    Clear
-                  </Text>
-                </View>
+                style={styles.smallActionBtn}
+                onPress={handleClearReply}>
+                <Icon name="trash-outline" size={18} color="#FF3B30" />
               </TouchableOpacity>
             </View>
           ) : null}
@@ -422,6 +458,31 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: '#f5f5f5',
+  },
+  topActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  bottomActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  smallActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    padding: 6,
+  },
+  smallActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
   },
   flexRow: {
     flexDirection: 'row',
