@@ -9,6 +9,7 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import sttService from './src/services/sttService';
 import settingsService from './src/services/settingsService';
 import {SettingsProvider} from './src/context/SettingsContext';
+import WERMetricsScreen from './src/screens/WERMetricsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -61,6 +62,12 @@ function App() {
               name="Settings"
               component={SettingsScreen}
               options={{headerShown: true, title: 'Settings'}}
+            />
+            {/* ✅ MOVE IT HERE — inside Stack.Navigator, before the closing tag */}
+            <Stack.Screen
+              name="WERMetrics"
+              component={WERMetricsScreen}
+              options={{headerShown: true, title: 'WER Metrics'}}
             />
           </Stack.Navigator>
         </NavigationContainer>

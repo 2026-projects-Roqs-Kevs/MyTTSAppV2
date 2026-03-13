@@ -183,6 +183,38 @@ const SettingsScreen = () => {
           <Icon name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
       </View> */}
+      {/* Tools & Diagnostics Section */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
+          Tools & Diagnostics
+        </Text>
+
+        {/* ── WER Metrics ── */}
+        <TouchableOpacity
+          style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
+          onPress={() => navigation.navigate('WERMetrics' as never)}>
+          <View style={styles.settingLeft}>
+            <View style={styles.settingIconRow}>
+              <Icon
+                name="analytics-outline"
+                size={22}
+                color="#007AFF"
+                style={styles.settingIcon}
+              />
+              <View>
+                <Text style={[styles.settingLabel, isDarkMode && styles.textDark]}>
+                  WER Metrics
+                </Text>
+                <Text
+                  style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
+                  Test speech recognition accuracy
+                </Text>
+              </View>
+            </View>
+          </View>
+          <Icon name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
+      </View>
 
       {/* About Section */}
       <View style={styles.section}>
