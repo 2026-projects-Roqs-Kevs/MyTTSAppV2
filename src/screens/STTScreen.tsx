@@ -163,13 +163,19 @@ const STTScreen = () => {
       if (!settings.singleSpeakerMode) {
         speakerDetectionService.reset();
       }
+      lastSpeechTime.current = Date.now();
       await sttService.startListening(
         text => {
+          const now = Date.now();
+          const pauseSecs = (now - lastSpeechTime.current) / 1000;
+          const punct = pauseSecs > 2 ? '. ' : pauseSecs > 1 ? ', ' : ' ';
           if (singleSpeakerModeRef.current) {
             const detection = speakerDetectionService.detectSpeakerChange(text);
             // Only transcribe if it's still person 1
             if (detection.speaker === 1) {
-              setTranscribedText(prev => (prev ? `${prev} ${text}` : text));
+              setTranscribedText(prev =>
+                prev ? `${prev}${punct}${text}` : text,
+              );
             }
             // silently ignore person 2
           } else {
@@ -181,11 +187,12 @@ const STTScreen = () => {
               if (detection.changed) {
                 return `${prev}\n\n${labeledText}`;
               } else {
-                return `${prev} ${text}`;
+                return `${prev}${punct}${text}`;
               }
             });
           }
           setPartialText('');
+          lastSpeechTime.current = now;
         },
         text => {
           setPartialText(text);
