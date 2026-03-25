@@ -18,6 +18,9 @@ function App() {
 
   useEffect(() => {
     initializeServices();
+    return () => {
+      sttService.cleanup();
+    };
   }, []);
 
   const initializeServices = async () => {

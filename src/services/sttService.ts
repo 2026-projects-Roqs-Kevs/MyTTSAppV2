@@ -39,7 +39,8 @@ class STTService {
   async startListening(
     onResult: (text: string) => void,
     onPartialResult?: (text: string) => void,
-    onPitchDetected?: (pitch: number) => void  // NEW
+    onPitchDetected?: (pitch: number) => void,
+    onTimeout?: () => void
   ) {
     if (!this.isInitialized) {
       throw new Error('STT Service not initialized. Call initialize() first.');
@@ -50,16 +51,12 @@ class STTService {
 
       const resultListener = voskEmitter.addListener('onResult', (data: string) => {
         console.log('>>> onResult:', data);
-        if (data) {
-          onResult(data);
-        }
+        if (data) onResult(data);
       });
 
       const finalResultListener = voskEmitter.addListener('onFinalResult', (data: string) => {
         console.log('>>> onFinalResult:', data);
-        if (data) {
-          onResult(data);
-        }
+        if (data) onResult(data);
       });
 
       if (onPartialResult) {
@@ -91,6 +88,7 @@ class STTService {
 
       const timeoutListener = voskEmitter.addListener('onTimeout', () => {
         console.log('>>> Vosk timeout');
+        if (onTimeout) onTimeout();
       });
 
       this.listeners.push(

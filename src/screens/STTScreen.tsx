@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
@@ -21,13 +21,17 @@ import {useNavigation} from '@react-navigation/native';
 import {useSettings} from '../context/SettingsContext';
 import KeepAwake from 'react-native-keep-awake';
 import speakerDetectionService from '../services/speakerDetectionService';
+import {NativeModules} from 'react-native';
+const {Vosk} = NativeModules;
 
 const STTScreen = () => {
   const [hasStartedOnce, setHasStartedOnce] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [transcribedText, setTranscribedText] = useState('');
   const [partialText, setPartialText] = useState('');
-  const [isInitialized, setIsInitialized] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(
+    sttService.getIsInitialized(),
+  );
   const [isInitializing, setIsInitializing] = useState(false);
   const [topPanelFlex, setTopPanelFlex] = useState(1);
   const [bottomPanelFlex, setBottomPanelFlex] = useState(1);
@@ -86,12 +90,6 @@ const STTScreen = () => {
   }, []);
 
   useEffect(() => {
-    if (settings.autoStartRecording && isInitialized && !isListening) {
-      handleStartListening();
-    }
-  }, [settings.autoStartRecording, isInitialized]);
-
-  useEffect(() => {
     // Switch language model when settings change
     const switchToSettingsLanguage = async () => {
       if (settings.language !== currentLanguage && !isListening) {
@@ -146,7 +144,7 @@ const STTScreen = () => {
     setReplyText('');
   };
 
-  const handleStartListening = async () => {
+  const handleStartListening = useCallback(async () => {
     if (!isInitialized) {
       Alert.alert('Error', 'Speech recognition is not initialized yet');
       return;
@@ -160,9 +158,7 @@ const STTScreen = () => {
       setHasStartedOnce(true);
       setIsListening(true);
       setPartialText('');
-      if (!settings.singleSpeakerMode) {
-        speakerDetectionService.reset();
-      }
+      speakerDetectionService.reset();
       lastSpeechTime.current = Date.now();
       await sttService.startListening(
         text => {
@@ -170,9 +166,9 @@ const STTScreen = () => {
           const pauseSecs = (now - lastSpeechTime.current) / 1000;
           const punct = pauseSecs > 2 ? '. ' : pauseSecs > 1 ? ', ' : ' ';
           if (singleSpeakerModeRef.current) {
-            const detection = speakerDetectionService.detectSpeakerChange(text);
-            // Only transcribe if it's still person 1
-            if (detection.speaker === 1) {
+            const isSameSpeaker =
+              speakerDetectionService.isSameAsReferenceSpeaker();
+            if (isSameSpeaker) {
               setTranscribedText(prev =>
                 prev ? `${prev}${punct}${text}` : text,
               );
@@ -208,13 +204,36 @@ const STTScreen = () => {
           // NEW — feed real pitch data to speaker detection
           speakerDetectionService.receivePitch(pitch);
         },
+        async () => {
+          // Auto-restart on timeout
+          console.log('>>> Timeout — restarting recognition...');
+          try {
+            await Vosk.stop();
+            await Vosk.start(null);
+            console.log('>>> Restarted after timeout');
+          } catch (e) {
+            console.error('>>> Failed to restart after timeout:', e);
+            setIsListening(false);
+          }
+        },
       );
     } catch (error) {
       console.error('Error starting listening:', error);
       Alert.alert('Error', 'Failed to start listening');
       setIsListening(false);
     }
-  };
+  }, [isInitialized, settings]);
+
+  useEffect(() => {
+    if (settings.autoStartRecording && isInitialized && !isListening) {
+      handleStartListening();
+    }
+  }, [
+    settings.autoStartRecording,
+    isInitialized,
+    isListening,
+    handleStartListening,
+  ]);
 
   const handleStopListening = async () => {
     try {

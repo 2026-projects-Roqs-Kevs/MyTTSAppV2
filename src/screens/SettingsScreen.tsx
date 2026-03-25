@@ -194,7 +194,7 @@ const SettingsScreen = () => {
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
           onPress={() => navigation.navigate('WERMetrics' as never)}>
           <View style={styles.settingLeft}>
-            <View style={styles.settingIconRow}>
+            <View>
               <Icon
                 name="analytics-outline"
                 size={22}
@@ -202,11 +202,15 @@ const SettingsScreen = () => {
                 style={styles.settingIcon}
               />
               <View>
-                <Text style={[styles.settingLabel, isDarkMode && styles.textDark]}>
+                <Text
+                  style={[styles.settingLabel, isDarkMode && styles.textDark]}>
                   WER Metrics
                 </Text>
                 <Text
-                  style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
+                  style={[
+                    styles.settingSubtext,
+                    isDarkMode && styles.subtextDark,
+                  ]}>
                   Test speech recognition accuracy
                 </Text>
               </View>

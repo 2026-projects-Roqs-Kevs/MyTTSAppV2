@@ -22,8 +22,8 @@ import KeepAwake from 'react-native-keep-awake';
 function normalizeText(text: string): string[] {
   return text
     .toLowerCase()
-    .replace(/[.,!?;:'"()\-–—\/\\]/g, '')  // strip punctuation incl. . ! ?
-    .replace(/\s+/g, ' ')                   // collapse extra spaces
+    .replace(/[.,!?;:'"()\-–—\/\\]/g, '') // strip punctuation incl. . ! ?
+    .replace(/\s+/g, ' ') // collapse extra spaces
     .trim()
     .split(' ')
     .filter(w => w.length > 0);
@@ -34,7 +34,14 @@ function computeWER(reference: string, hypothesis: string) {
   const hyp = normalizeText(hypothesis);
 
   if (ref.length === 0) {
-    return {wer: 0, wordCount: 0, substitutions: 0, deletions: 0, insertions: 0, errors: 0};
+    return {
+      wer: 0,
+      wordCount: 0,
+      substitutions: 0,
+      deletions: 0,
+      insertions: 0,
+      errors: 0,
+    };
   }
 
   const m = ref.length;
@@ -53,17 +60,25 @@ function computeWER(reference: string, hypothesis: string) {
     }
   }
 
-  let i = m, j = n;
-  let substitutions = 0, deletions = 0, insertions = 0;
+  let i = m,
+    j = n;
+  let substitutions = 0,
+    deletions = 0,
+    insertions = 0;
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0 && ref[i - 1] === hyp[j - 1]) {
-      i--; j--;
+      i--;
+      j--;
     } else if (i > 0 && j > 0 && dp[i][j] === dp[i - 1][j - 1] + 1) {
-      substitutions++; i--; j--;
+      substitutions++;
+      i--;
+      j--;
     } else if (i > 0 && dp[i][j] === dp[i - 1][j] + 1) {
-      deletions++; i--;
+      deletions++;
+      i--;
     } else {
-      insertions++; j--;
+      insertions++;
+      j--;
     }
   }
 
@@ -90,11 +105,16 @@ const WERMetricsScreen = () => {
   const [referenceText, setReferenceText] = useState('');
   const [transcribedText, setTranscribedText] = useState('');
   const [partialText, setPartialText] = useState('');
-  const [werResult, setWerResult] = useState<ReturnType<typeof computeWER> | null>(null);
+  const [werResult, setWerResult] = useState<ReturnType<
+    typeof computeWER
+  > | null>(null);
 
   const [topPanelFlex, setTopPanelFlex] = useState(1);
   const [bottomPanelFlex, setBottomPanelFlex] = useState(1);
   const containerHeight = useRef(0);
+  const [isInitialized, setIsInitialized] = useState(
+    sttService.getIsInitialized(),
+  );
 
   const panResponder = useRef(
     PanResponder.create({
@@ -102,7 +122,10 @@ const WERMetricsScreen = () => {
       onPanResponderMove: (_, gestureState) => {
         const total = containerHeight.current;
         if (!total) return;
-        const clamped = Math.min(Math.max(gestureState.moveY / total, 0.2), 0.8);
+        const clamped = Math.min(
+          Math.max(gestureState.moveY / total, 0.2),
+          0.8,
+        );
         setTopPanelFlex(clamped);
         setBottomPanelFlex(1 - clamped);
       },
@@ -133,6 +156,14 @@ const WERMetricsScreen = () => {
   };
 
   const handleStartListening = async () => {
+    if (!sttService.getIsInitialized()) {
+      Alert.alert(
+        'Not Ready',
+        'Speech recognition is still initializing. Please wait.',
+      );
+      return;
+    }
+
     if (!referenceText.trim()) {
       Alert.alert('Missing Reference', 'Please type the reference text first.');
       return;
@@ -265,11 +296,13 @@ const WERMetricsScreen = () => {
       {isListening && <KeepAwake />}
 
       <View style={styles.activeContainer}>
-
         {/* TOP PANEL — partial text / listening state */}
         <View style={{flex: topPanelFlex}}>
           <ScrollView
-            style={[styles.textContainer, isDarkMode && styles.textContainerDark]}
+            style={[
+              styles.textContainer,
+              isDarkMode && styles.textContainerDark,
+            ]}
             contentContainerStyle={styles.textContent}>
             <Text
               style={[
@@ -310,7 +343,11 @@ const WERMetricsScreen = () => {
               color="#fff"
             />
             <Text style={styles.toggleButtonText}>
-              {isInitializing ? 'Initializing...' : isListening ? 'Stop' : 'Start'}
+              {isInitializing
+                ? 'Initializing...'
+                : isListening
+                ? 'Stop'
+                : 'Start'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -373,10 +410,13 @@ const WERMetricsScreen = () => {
           <ScrollView
             style={[styles.werCard, isDarkMode && styles.werCardDark]}
             nestedScrollEnabled>
-
             {/* Score + label */}
             <View style={styles.werScoreRow}>
-              <Text style={[styles.werScoreNum, {color: getWERColor(werResult.wer)}]}>
+              <Text
+                style={[
+                  styles.werScoreNum,
+                  {color: getWERColor(werResult.wer)},
+                ]}>
                 {werResult.wer.toFixed(1)}%
               </Text>
               <View
@@ -384,7 +424,11 @@ const WERMetricsScreen = () => {
                   styles.werBadge,
                   {backgroundColor: getWERColor(werResult.wer) + '22'},
                 ]}>
-                <Text style={[styles.werBadgeText, {color: getWERColor(werResult.wer)}]}>
+                <Text
+                  style={[
+                    styles.werBadgeText,
+                    {color: getWERColor(werResult.wer)},
+                  ]}>
                   {getWERLabel(werResult.wer)}
                 </Text>
               </View>
@@ -412,15 +456,25 @@ const WERMetricsScreen = () => {
               {[
                 {label: 'Words', value: werResult.wordCount, color: '#007AFF'},
                 {label: 'Errors', value: werResult.errors, color: '#FF3B30'},
-                {label: 'Sub', value: werResult.substitutions, color: '#FF9500'},
+                {
+                  label: 'Sub',
+                  value: werResult.substitutions,
+                  color: '#FF9500',
+                },
                 {label: 'Del', value: werResult.deletions, color: '#FF3B30'},
                 {label: 'Ins', value: werResult.insertions, color: '#34C759'},
               ].map(s => (
                 <View
                   key={s.label}
                   style={[styles.statBox, isDarkMode && styles.statBoxDark]}>
-                  <Text style={[styles.statVal, {color: s.color}]}>{s.value}</Text>
-                  <Text style={[styles.statLabel, isDarkMode && styles.subtextDark]}>
+                  <Text style={[styles.statVal, {color: s.color}]}>
+                    {s.value}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.statLabel,
+                      isDarkMode && styles.subtextDark,
+                    ]}>
                     {s.label}
                   </Text>
                 </View>
@@ -429,10 +483,12 @@ const WERMetricsScreen = () => {
 
             {/* Reference vs Transcript comparison */}
             <View style={styles.compareBlock}>
-              <Text style={[styles.compareTitle, isDarkMode && styles.textDark]}>
+              <Text
+                style={[styles.compareTitle, isDarkMode && styles.textDark]}>
                 Reference
               </Text>
-              <Text style={[styles.compareText, isDarkMode && styles.subtextDark]}>
+              <Text
+                style={[styles.compareText, isDarkMode && styles.subtextDark]}>
                 {referenceText}
               </Text>
               <Text
@@ -443,7 +499,8 @@ const WERMetricsScreen = () => {
                 ]}>
                 Transcript
               </Text>
-              <Text style={[styles.compareText, isDarkMode && styles.subtextDark]}>
+              <Text
+                style={[styles.compareText, isDarkMode && styles.subtextDark]}>
                 {transcribedText}
               </Text>
             </View>
@@ -495,7 +552,11 @@ const styles = StyleSheet.create({
     minHeight: 100,
     color: '#333',
   },
-  refInputDark: {backgroundColor: '#2a2a2a', borderColor: '#444', color: '#fff'},
+  refInputDark: {
+    backgroundColor: '#2a2a2a',
+    borderColor: '#444',
+    color: '#fff',
+  },
   micButton: {
     padding: 24,
     borderRadius: 80,
@@ -597,7 +658,12 @@ const styles = StyleSheet.create({
   werScoreNum: {fontSize: 44, fontWeight: '900', letterSpacing: -1},
   werBadge: {paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20},
   werBadgeText: {fontSize: 14, fontWeight: '700'},
-  progressBg: {height: 8, borderRadius: 4, marginBottom: 12, overflow: 'hidden'},
+  progressBg: {
+    height: 8,
+    borderRadius: 4,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
   progressFill: {height: '100%', borderRadius: 4},
   statsRow: {flexDirection: 'row', gap: 6, marginBottom: 12},
   statBox: {

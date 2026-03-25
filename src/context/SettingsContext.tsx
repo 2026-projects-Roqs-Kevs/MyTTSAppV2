@@ -37,6 +37,13 @@ export const SettingsProvider: React.FC<{children: ReactNode}> = ({
     loadSettings();
   }, []);
 
+  useEffect(() => {
+    const sub = Appearance.addChangeListener(() => {
+      setSettings(prev => ({...prev}));
+    });
+    return () => sub.remove();
+  }, []);
+
   const loadSettings = async () => {
     try {
       const loadedSettings = await settingsService.getSettings();

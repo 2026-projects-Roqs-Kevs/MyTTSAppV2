@@ -7,15 +7,15 @@ class SpeakerDetectionService {
   private currentSpeaker: number = 1;
   private previousCharacteristics: VoiceCharacteristics | null = null;
   private speakerHistory: number[] = [];
-  private readonly CHANGE_THRESHOLD = 0.25;
+  private readonly CHANGE_THRESHOLD = 0.40;
+  private consecutiveChanges: number = 0;
+  private readonly REQUIRED_CONSECUTIVE = 2;
 
   private pitchBuffer: number[] = [];
   private readonly PITCH_BUFFER_MAX = 20;
 
   receivePitch(pitch: number) {
-    // Filter out unrealistic pitch values
-    // Human voice range: 80Hz (deep male) to 300Hz (high female)
-    if (pitch < 80 || pitch > 300) return;
+    if (pitch < 85 || pitch > 400) return;
     
     this.pitchBuffer.push(pitch);
     if (this.pitchBuffer.length > this.PITCH_BUFFER_MAX) {
@@ -59,14 +59,56 @@ class SpeakerDetectionService {
     console.log('>>> pitchDiff:', pitchDiff);
 
     if (pitchDiff > this.CHANGE_THRESHOLD) {
-      this.currentSpeaker = this.currentSpeaker === 1 ? 2 : 1;
-      this.previousCharacteristics = current;
-      this.speakerHistory.push(this.currentSpeaker);
-      return { changed: true, speaker: this.currentSpeaker };
+      this.consecutiveChanges++;
+      if (this.consecutiveChanges >= this.REQUIRED_CONSECUTIVE) {
+        this.currentSpeaker = this.currentSpeaker === 1 ? 2 : 1;
+        this.consecutiveChanges = 0;
+        this.previousCharacteristics = current;
+        this.speakerHistory.push(this.currentSpeaker);
+        return { changed: true, speaker: this.currentSpeaker };
+      }
+    } else {
+      this.consecutiveChanges = 0;
     }
 
     this.previousCharacteristics = current;
     return { changed: false, speaker: this.currentSpeaker };
+  }
+
+  isSameAsReferenceSpeaker(): boolean {
+    const avgPitch = this.getAveragePitch();
+
+    if (avgPitch === 0 || this.pitchBuffer.length < 2) {
+      this.pitchBuffer = [];
+      return true;
+    }
+
+    this.pitchBuffer = [];
+
+    if (!this.previousCharacteristics) {
+      this.previousCharacteristics = {
+        pitch: avgPitch,
+        timestamp: Date.now(),
+      };
+      return true;
+    }
+
+    const pitchDiff =
+      Math.abs(avgPitch - this.previousCharacteristics.pitch) /
+      this.previousCharacteristics.pitch;
+
+    console.log('>>> [SingleSpeaker] pitchDiff:', pitchDiff, 'avg:', avgPitch, 'ref:', this.previousCharacteristics.pitch);
+
+    if (pitchDiff <= this.CHANGE_THRESHOLD) {
+      // Same speaker — update reference with rolling average
+      this.previousCharacteristics = {
+        pitch: (this.previousCharacteristics.pitch + avgPitch) / 2,
+        timestamp: Date.now(),
+      };
+      return true;
+    }
+
+    return false;
   }
 
   getCurrentSpeaker(): number {
@@ -78,6 +120,7 @@ class SpeakerDetectionService {
     this.previousCharacteristics = null;
     this.speakerHistory = [];
     this.pitchBuffer = [];
+    this.consecutiveChanges = 0;
   }
 }
 
