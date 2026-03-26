@@ -218,6 +218,34 @@ const SettingsScreen = () => {
           </View>
           <Icon name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
+          onPress={() => navigation.navigate('WordList' as never)}>
+          <View style={styles.settingLeft}>
+            <View>
+              <Icon
+                name="book-outline"
+                size={22}
+                color="#007AFF"
+                style={styles.settingIcon}
+              />
+              <View>
+                <Text
+                  style={[styles.settingLabel, isDarkMode && styles.textDark]}>
+                  Word List
+                </Text>
+                <Text
+                  style={[
+                    styles.settingSubtext,
+                    isDarkMode && styles.subtextDark,
+                  ]}>
+                  Manage Taglish correction words
+                </Text>
+              </View>
+            </View>
+          </View>
+          <Icon name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
       </View>
 
       {/* About Section */}

@@ -22,6 +22,7 @@ import {useSettings} from '../context/SettingsContext';
 import KeepAwake from 'react-native-keep-awake';
 import speakerDetectionService from '../services/speakerDetectionService';
 import {NativeModules} from 'react-native';
+import taglishCorrectionService from '../services/taglishCorrectionService';
 const {Vosk} = NativeModules;
 
 const STTScreen = () => {
@@ -162,6 +163,7 @@ const STTScreen = () => {
       lastSpeechTime.current = Date.now();
       await sttService.startListening(
         text => {
+          const correctedText = taglishCorrectionService.correct(text);
           const now = Date.now();
           const pauseSecs = (now - lastSpeechTime.current) / 1000;
           const punct = pauseSecs > 2 ? '. ' : pauseSecs > 1 ? ', ' : ' ';
@@ -170,20 +172,19 @@ const STTScreen = () => {
               speakerDetectionService.isSameAsReferenceSpeaker();
             if (isSameSpeaker) {
               setTranscribedText(prev =>
-                prev ? `${prev}${punct}${text}` : text,
+                prev ? `${prev}${punct}${correctedText}` : correctedText,
               );
             }
-            // silently ignore person 2
           } else {
-            // Multi-speaker mode — existing logic
-            const detection = speakerDetectionService.detectSpeakerChange(text);
-            const labeledText = `[Person ${detection.speaker}] ${text}`;
+            const detection =
+              speakerDetectionService.detectSpeakerChange(correctedText);
+            const labeledText = `[Person ${detection.speaker}] ${correctedText}`;
             setTranscribedText(prev => {
               if (!prev) return labeledText;
               if (detection.changed) {
                 return `${prev}\n\n${labeledText}`;
               } else {
-                return `${prev}${punct}${text}`;
+                return `${prev}${punct}${correctedText}`;
               }
             });
           }
@@ -191,6 +192,7 @@ const STTScreen = () => {
           lastSpeechTime.current = now;
         },
         text => {
+          taglishCorrectionService.trackPartial(text);
           setPartialText(text);
           if (settings.vibrateOnSpeech && text) {
             const now = Date.now();
@@ -240,6 +242,7 @@ const STTScreen = () => {
       await sttService.stopListening();
       setIsListening(false);
       setPartialText('');
+      taglishCorrectionService.resetPartialHistory();
     } catch (error) {
       console.error('Error stopping listening:', error);
       setIsListening(false);

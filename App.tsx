@@ -10,6 +10,8 @@ import sttService from './src/services/sttService';
 import settingsService from './src/services/settingsService';
 import {SettingsProvider} from './src/context/SettingsContext';
 import WERMetricsScreen from './src/screens/WERMetricsScreen';
+import taglishCorrectionService from './src/services/taglishCorrectionService';
+import WordListScreen from './src/screens/WordListScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -32,6 +34,7 @@ function App() {
       // Wait for BOTH minimum 2 seconds AND Vosk to initialize
       await Promise.all([
         sttService.initialize(modelPath),
+        taglishCorrectionService.initialize(),
         new Promise(resolve => setTimeout(resolve, 2000)),
       ]);
     } catch (error) {
@@ -71,6 +74,11 @@ function App() {
               name="WERMetrics"
               component={WERMetricsScreen}
               options={{headerShown: true, title: 'WER Metrics'}}
+            />
+            <Stack.Screen
+              name="WordList"
+              component={WordListScreen}
+              options={{headerShown: true, title: 'Word List'}}
             />
           </Stack.Navigator>
         </NavigationContainer>
