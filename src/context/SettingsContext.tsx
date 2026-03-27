@@ -30,6 +30,7 @@ export const SettingsProvider: React.FC<{children: ReactNode}> = ({
     language: 'tl',
     vibrateOnSpeech: false,
     singleSpeakerMode: true,
+    noiseReduction: false,
   });
   const [isLoading, setIsLoading] = useState(true);
 

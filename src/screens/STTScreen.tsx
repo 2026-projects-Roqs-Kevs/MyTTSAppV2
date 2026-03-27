@@ -13,6 +13,7 @@ import {
   Clipboard,
   PanResponder,
   TextInput,
+  Image,
 } from 'react-native';
 import sttService from '../services/sttService';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -44,6 +45,10 @@ const STTScreen = () => {
   const [currentLanguage, setCurrentLanguage] = useState<'en' | 'tl'>('tl');
   const navigation = useNavigation();
   const singleSpeakerModeRef = React.useRef(settings.singleSpeakerMode);
+  const activeModelRef = React.useRef<'tl' | 'en'>(
+    settings.language as 'tl' | 'en',
+  );
+  const isSwitchingModelRef = React.useRef(false);
   const [replyText, setReplyText] = useState('');
 
   useEffect(() => {
@@ -72,9 +77,7 @@ const STTScreen = () => {
       if (!sttService.getIsInitialized()) {
         try {
           setIsInitializing(true);
-          const modelPath =
-            currentLanguage === 'en' ? 'model-en-us' : 'model-tl-ph';
-          await sttService.initialize(modelPath);
+          await sttService.initialize(settings.language as 'tl' | 'en');
         } catch (error) {
           console.error('Failed to reinitialize STT:', error);
         } finally {
@@ -96,9 +99,7 @@ const STTScreen = () => {
       if (settings.language !== currentLanguage && !isListening) {
         try {
           setIsInitializing(true);
-          const modelPath =
-            settings.language === 'en' ? 'model-en-us' : 'model-tl-ph';
-          await sttService.switchLanguage(modelPath);
+          await sttService.switchLanguage(settings.language as 'tl' | 'en');
           setCurrentLanguage(settings.language);
         } catch (error) {
           console.error('Error switching language:', error);
@@ -160,6 +161,9 @@ const STTScreen = () => {
       setIsListening(true);
       setPartialText('');
       speakerDetectionService.reset();
+      activeModelRef.current = settings.language as 'tl' | 'en';
+      isSwitchingModelRef.current = false;
+      taglishCorrectionService.resetLanguageDetection();
       lastSpeechTime.current = Date.now();
       await sttService.startListening(
         text => {
@@ -167,6 +171,25 @@ const STTScreen = () => {
           const now = Date.now();
           const pauseSecs = (now - lastSpeechTime.current) / 1000;
           const punct = pauseSecs > 2 ? '. ' : pauseSecs > 1 ? ', ' : ' ';
+
+          // Reset to TL on period
+          if (
+            pauseSecs > 2 &&
+            activeModelRef.current !== 'tl' &&
+            !isSwitchingModelRef.current
+          ) {
+            isSwitchingModelRef.current = true;
+            sttService
+              .switchLanguage('tl')
+              .then(() => {
+                activeModelRef.current = 'tl';
+                taglishCorrectionService.resetLanguageDetection();
+                console.log('>>> Reset to TL after period pause');
+              })
+              .finally(() => {
+                isSwitchingModelRef.current = false;
+              });
+          }
           if (singleSpeakerModeRef.current) {
             const isSameSpeaker =
               speakerDetectionService.isSameAsReferenceSpeaker();
@@ -191,9 +214,35 @@ const STTScreen = () => {
           setPartialText('');
           lastSpeechTime.current = now;
         },
-        text => {
+        async text => {
           taglishCorrectionService.trackPartial(text);
           setPartialText(text);
+
+          // Language detection — check if we need to switch model
+          const suggestedLang = taglishCorrectionService.detectLanguage(
+            text,
+            activeModelRef.current,
+          );
+          if (
+            suggestedLang &&
+            suggestedLang !== activeModelRef.current &&
+            !isSwitchingModelRef.current // guard against concurrent switches
+          ) {
+            isSwitchingModelRef.current = true;
+            try {
+              await sttService.switchLanguage(suggestedLang);
+              activeModelRef.current = suggestedLang;
+              taglishCorrectionService.resetLanguageDetection(); // reset counters after switch
+              console.log(
+                `>>> [STTScreen] Switched to model: ${suggestedLang}`,
+              );
+            } catch (e) {
+              console.error('>>> [STTScreen] Failed to switch model:', e);
+            } finally {
+              isSwitchingModelRef.current = false;
+            }
+          }
+
           if (settings.vibrateOnSpeech && text) {
             const now = Date.now();
             if (now - lastSpeechTime.current > 5 * 60 * 1000) {
@@ -207,17 +256,28 @@ const STTScreen = () => {
           speakerDetectionService.receivePitch(pitch);
         },
         async () => {
-          // Auto-restart on timeout
           console.log('>>> Timeout — restarting recognition...');
           try {
-            await Vosk.stop();
-            await Vosk.start(null);
-            console.log('>>> Restarted after timeout');
+            try {
+              await Vosk.stop();
+            } catch (_) {}
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // Reset to TL on pause
+            if (activeModelRef.current !== 'tl') {
+              await sttService.switchLanguage('tl');
+              activeModelRef.current = 'tl';
+              taglishCorrectionService.resetLanguageDetection();
+              console.log('>>> Reset to TL after pause');
+            }
+
+            await Vosk.startWithModel(activeModelRef.current, null);
           } catch (e) {
             console.error('>>> Failed to restart after timeout:', e);
             setIsListening(false);
           }
         },
+        settings.noiseReduction,
       );
     } catch (error) {
       console.error('Error starting listening:', error);
@@ -278,9 +338,7 @@ const STTScreen = () => {
     try {
       setIsInitializing(true);
       const newLang = currentLanguage === 'en' ? 'tl' : 'en';
-      const modelPath = newLang === 'en' ? 'model-en-us' : 'model-tl-ph';
-
-      await sttService.switchLanguage(modelPath);
+      await sttService.switchLanguage(newLang);
       setCurrentLanguage(newLang);
       Alert.alert(
         'Success',
@@ -329,15 +387,30 @@ const STTScreen = () => {
             containerHeight.current = e.nativeEvent.layout.height;
           }}>
           {/* Settings icon */}
-          <TouchableOpacity
-            style={styles.settingsIcon}
-            onPress={() => navigation.navigate('Settings' as never)}>
-            <Icon
-              name="settings-outline"
-              size={28}
-              color={isDarkMode ? '#fff' : '#333'}
-            />
-          </TouchableOpacity>
+          <View>
+            <View style={[styles.headerStyle, isDarkMode && styles.headerDark]}>
+              <Image
+                source={require('../../assets/bglogo.png')}
+                style={{width: 40, height: 40, resizeMode: 'contain'}}
+              />
+              <Text
+                style={[
+                  styles.headerTitleStyle,
+                  isDarkMode && styles.headerTitleDark,
+                ]}>
+                EchoLinK
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.settingsIcon}
+              onPress={() => navigation.navigate('Settings' as never)}>
+              <Icon
+                name="settings-outline"
+                size={28}
+                color={isDarkMode ? '#fff' : '#333'}
+              />
+            </TouchableOpacity>
+          </View>
 
           {/* TOP PANEL — partialText */}
           <View style={{flex: topPanelFlex}}>
@@ -383,7 +456,9 @@ const STTScreen = () => {
           </View>
 
           {/* DIVIDER */}
-          <View {...panResponder.panHandlers} style={styles.divider}>
+          <View
+            {...panResponder.panHandlers}
+            style={[styles.divider, {paddingHorizontal: 5}]}>
             {!isListening && transcribedText ? (
               <View style={styles.topActionRow}>
                 <TouchableOpacity
@@ -406,9 +481,10 @@ const STTScreen = () => {
                 borderRadius: 5,
               }}>
               <Icon
-                name="reorder-three-outline"
+                name="resize-outline"
                 size={34}
                 color={isDarkMode ? '#aaa' : '#555'}
+                style={{transform: [{rotate: '135deg'}]}}
               />
             </View>
             <TouchableOpacity
@@ -485,7 +561,6 @@ const STTScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: '#f5f5f5',
   },
   topActionRow: {
@@ -522,6 +597,28 @@ const styles = StyleSheet.create({
   containerDark: {
     backgroundColor: '#1a1a1a',
   },
+  headerDark: {
+    backgroundColor: '#0c0c0c',
+    borderBottomWidth: 2,
+    borderBottomColor: '#fff',
+  },
+  headerStyle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#fcf7f7',
+    borderBottomWidth: 2,
+    borderBottomColor: '#3b3939',
+    paddingHorizontal: 2,
+    paddingVertical: 5,
+  },
+  headerTitleStyle: {
+    color: '#000',
+    fontSize: 18,
+  },
+  headerTitleDark: {
+    color: '#ffffff',
+  },
   buttonDisabled: {
     opacity: 0.5,
     backgroundColor: '#999',
@@ -536,6 +633,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     zIndex: 10,
+    bottom: 10,
   },
   buttonContent: {
     flexDirection: 'row',
@@ -690,7 +788,6 @@ const styles = StyleSheet.create({
   },
   activeContainer: {
     flex: 1,
-    paddingTop: 35,
   },
   statusLabel: {
     fontSize: 22,

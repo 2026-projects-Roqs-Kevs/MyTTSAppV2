@@ -149,6 +149,24 @@ const SettingsScreen = () => {
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}>
           <View style={styles.settingLeft}>
             <Text style={[styles.settingLabel, isDarkMode && styles.textDark]}>
+              Noise Reduction
+            </Text>
+            <Text
+              style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
+              Filter background noise during recording
+            </Text>
+          </View>
+          <Switch
+            value={settings.noiseReduction}
+            onValueChange={value => updateSettings({noiseReduction: value})}
+            trackColor={{false: '#767577', true: '#34C759'}}
+          />
+        </View>
+
+        <View
+          style={[styles.settingItem, isDarkMode && styles.settingItemDark]}>
+          <View style={styles.settingLeft}>
+            <Text style={[styles.settingLabel, isDarkMode && styles.textDark]}>
               Detect only one speaker
             </Text>
             <Text

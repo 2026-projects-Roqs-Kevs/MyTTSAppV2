@@ -28,12 +28,10 @@ function App() {
   const initializeServices = async () => {
     try {
       const savedSettings = await settingsService.getSettings();
-      const modelPath =
-        savedSettings.language === 'en' ? 'model-en-us' : 'model-tl-ph';
+      const primaryModel = savedSettings.language === 'en' ? 'en' : 'tl';
 
-      // Wait for BOTH minimum 2 seconds AND Vosk to initialize
       await Promise.all([
-        sttService.initialize(modelPath),
+        sttService.initialize(primaryModel),
         taglishCorrectionService.initialize(),
         new Promise(resolve => setTimeout(resolve, 2000)),
       ]);
