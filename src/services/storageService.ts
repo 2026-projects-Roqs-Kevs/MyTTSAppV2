@@ -73,7 +73,7 @@ class StorageService {
       const filePath = `${RNFS.DownloadDirectoryPath}/${fileName}`;
 
       const fileContent = [
-        `EchoLinK Transcription`,
+        `EchoLink Transcription`,
         `====================`,
         `Date: ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`,
         `====================`,

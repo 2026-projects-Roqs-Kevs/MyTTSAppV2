@@ -32,7 +32,7 @@ const WelcomeScreen: React.FC = () => {
         />
       </View>
       <Text style={[styles.title, isDarkMode && styles.textDark]}>
-        Welcome to EchoLinK
+        Welcome to EchoLink
       </Text>
       <Animated.Image
         source={require('../../assets/loading-el.png')}
