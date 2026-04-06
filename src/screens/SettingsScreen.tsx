@@ -33,7 +33,7 @@ const SettingsScreen = () => {
   const handleOpenLicenses = () => {
     Alert.alert(
       'Open Source Licenses',
-      'React Native - MIT License\nVosk Speech Recognition - Apache 2.0\nreact-native-tts - MIT License\n@react-native-async-storage/async-storage - MIT License\nreact-native-vector-icons - MIT License\n@react-navigation - MIT License',
+      'React Native - MIT License\n\nVosk Speech Recognition - Apache 2.0\n\n@react-native-async-storage/async-storage - MIT License\n\nreact-native-vector-icons - MIT License\n\n@react-navigation - MIT License',
       [{text: 'OK'}],
     );
   };
@@ -50,22 +50,29 @@ const SettingsScreen = () => {
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
           onPress={() => setShowTextSizeModal(true)}>
           <View style={styles.settingLeft}>
-            <Text style={[styles.settingLabel, isDarkMode && styles.textDark]}>
+            <Text
+              style={[
+                styles.settingLabel,
+                isDarkMode && styles.settingLabelDark,
+              ]}>
               Text Size
             </Text>
-            <Text
+            {/* <Text
               style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
               Current: {settings.textSize} (default: 16)
-            </Text>
+            </Text> */}
           </View>
-          <Icon name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
           onPress={() => setShowThemeModal(true)}>
           <View style={styles.settingLeft}>
-            <Text style={[styles.settingLabel, isDarkMode && styles.textDark]}>
+            <Text
+              style={[
+                styles.settingLabel,
+                isDarkMode && styles.settingLabelDark,
+              ]}>
               Theme
             </Text>
             <Text
@@ -77,7 +84,6 @@ const SettingsScreen = () => {
                 : 'System'}
             </Text>
           </View>
-          <Icon name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
       </View>
 
@@ -90,7 +96,11 @@ const SettingsScreen = () => {
         <View
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}>
           <View style={styles.settingLeft}>
-            <Text style={[styles.settingLabel, isDarkMode && styles.textDark]}>
+            <Text
+              style={[
+                styles.settingLabel,
+                isDarkMode && styles.settingLabelDark,
+              ]}>
               Auto-start Recording
             </Text>
             <Text
@@ -104,20 +114,67 @@ const SettingsScreen = () => {
             trackColor={{false: '#767577', true: '#34C759'}}
           />
         </View>
-
+        <View
+          style={[styles.settingItem, isDarkMode && styles.settingItemDark]}>
+          <View style={styles.settingLeft}>
+            <Text
+              style={[
+                styles.settingLabel,
+                isDarkMode && styles.settingLabelDark,
+              ]}>
+              Detect only one speaker
+            </Text>
+            <Text
+              style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
+              Turn off for multi-speaker transcription
+            </Text>
+          </View>
+          <Switch
+            value={settings.singleSpeakerMode}
+            onValueChange={value => updateSettings({singleSpeakerMode: value})}
+            trackColor={{false: '#767577', true: '#34C759'}}
+          />
+        </View>
         <TouchableOpacity
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
           onPress={() => setShowLanguageModal(true)}>
           <View style={styles.settingLeft}>
-            <Text style={[styles.settingLabel, isDarkMode && styles.textDark]}>
+            <Text
+              style={[
+                styles.settingLabel,
+                isDarkMode && styles.settingLabelDark,
+              ]}>
               Language
             </Text>
             <Text
               style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
-              {settings.language === 'en' ? 'English 🇺🇸' : 'Tagalog 🇵🇭'}
+              {settings.language === 'en' ? 'English' : 'Tagalog'}
             </Text>
           </View>
-          <Icon name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
+          onPress={() => navigation.navigate('WordList' as never)}>
+          <View style={styles.settingLeft}>
+            <View>
+              <View>
+                <Text
+                  style={[
+                    styles.settingLabel,
+                    isDarkMode && styles.settingLabelDark,
+                  ]}>
+                  Word List
+                </Text>
+                <Text
+                  style={[
+                    styles.settingSubtext,
+                    isDarkMode && styles.subtextDark,
+                  ]}>
+                  Manage Taglish correction words
+                </Text>
+              </View>
+            </View>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -130,12 +187,17 @@ const SettingsScreen = () => {
         <View
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}>
           <View style={styles.settingLeft}>
-            <Text style={[styles.settingLabel, isDarkMode && styles.textDark]}>
+            <Text
+              style={[
+                styles.settingLabel,
+                isDarkMode && styles.settingLabelDark,
+              ]}>
               Vibrate on speech
             </Text>
             <Text
               style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
-              After 5 minutes of silence
+              Phone vibrate when someone starts speaking after the pause of at
+              least 10 minutes
             </Text>
           </View>
           <Switch
@@ -148,35 +210,21 @@ const SettingsScreen = () => {
         <View
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}>
           <View style={styles.settingLeft}>
-            <Text style={[styles.settingLabel, isDarkMode && styles.textDark]}>
+            <Text
+              style={[
+                styles.settingLabel,
+                isDarkMode && styles.settingLabelDark,
+              ]}>
               Noise Reduction
             </Text>
-            <Text
+            {/* <Text
               style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
               Filter background noise during recording
-            </Text>
+            </Text> */}
           </View>
           <Switch
             value={settings.noiseReduction}
             onValueChange={value => updateSettings({noiseReduction: value})}
-            trackColor={{false: '#767577', true: '#34C759'}}
-          />
-        </View>
-
-        <View
-          style={[styles.settingItem, isDarkMode && styles.settingItemDark]}>
-          <View style={styles.settingLeft}>
-            <Text style={[styles.settingLabel, isDarkMode && styles.textDark]}>
-              Detect only one speaker
-            </Text>
-            <Text
-              style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
-              Turn off for multi-speaker transcription
-            </Text>
-          </View>
-          <Switch
-            value={settings.singleSpeakerMode}
-            onValueChange={value => updateSettings({singleSpeakerMode: value})}
             trackColor={{false: '#767577', true: '#34C759'}}
           />
         </View>
@@ -194,11 +242,10 @@ const SettingsScreen = () => {
               color="#007AFF"
               style={styles.settingIcon}
             />
-            <Text style={[styles.settingLabel, isDarkMode && styles.textDark]}>
+            <Text style={[styles.settingLabel, isDarkMode && styles.settingLabelDark]}>
               Saved Transcriptions
             </Text>
           </View>
-          <Icon name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
       </View> */}
       {/* Tools & Diagnostics Section */}
@@ -213,15 +260,12 @@ const SettingsScreen = () => {
           onPress={() => navigation.navigate('WERMetrics' as never)}>
           <View style={styles.settingLeft}>
             <View>
-              <Icon
-                name="analytics-outline"
-                size={22}
-                color="#007AFF"
-                style={styles.settingIcon}
-              />
               <View>
                 <Text
-                  style={[styles.settingLabel, isDarkMode && styles.textDark]}>
+                  style={[
+                    styles.settingLabel,
+                    isDarkMode && styles.settingLabelDark,
+                  ]}>
                   WER Metrics
                 </Text>
                 <Text
@@ -234,35 +278,7 @@ const SettingsScreen = () => {
               </View>
             </View>
           </View>
-          <Icon name="chevron-forward" size={20} color="#999" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
-          onPress={() => navigation.navigate('WordList' as never)}>
-          <View style={styles.settingLeft}>
-            <View>
-              <Icon
-                name="book-outline"
-                size={22}
-                color="#007AFF"
-                style={styles.settingIcon}
-              />
-              <View>
-                <Text
-                  style={[styles.settingLabel, isDarkMode && styles.textDark]}>
-                  Word List
-                </Text>
-                <Text
-                  style={[
-                    styles.settingSubtext,
-                    isDarkMode && styles.subtextDark,
-                  ]}>
-                  Manage Taglish correction words
-                </Text>
-              </View>
-            </View>
-          </View>
-          <Icon name="chevron-forward" size={20} color="#999" />
+          {/* <Icon name="chevron-forward" size={20} color="#999" /> */}
         </TouchableOpacity>
       </View>
 
@@ -276,22 +292,28 @@ const SettingsScreen = () => {
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
           onPress={handleSendFeedback}>
           <View style={styles.settingLeft}>
-            <Text style={[styles.settingLabel, isDarkMode && styles.textDark]}>
+            <Text
+              style={[
+                styles.settingLabel,
+                isDarkMode && styles.settingLabelDark,
+              ]}>
               Send Feedback
             </Text>
           </View>
-          <Icon name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
           onPress={handleOpenLicenses}>
           <View style={styles.settingLeft}>
-            <Text style={[styles.settingLabel, isDarkMode && styles.textDark]}>
+            <Text
+              style={[
+                styles.settingLabel,
+                isDarkMode && styles.settingLabelDark,
+              ]}>
               Open Source Licenses
             </Text>
           </View>
-          <Icon name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
       </View>
 
@@ -481,7 +503,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   containerDark: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#4F4F4F',
   },
   section: {
     marginTop: 20,
@@ -489,26 +511,23 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: '#056530',
     paddingHorizontal: 20,
     marginBottom: 8,
     textTransform: 'uppercase',
   },
   textDark: {
-    color: '#fff',
+    color: '#3FD8A3',
   },
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   settingItemDark: {
-    backgroundColor: '#2a2a2a',
-    borderBottomColor: '#444',
+    backgroundColor: 'transparent',
   },
   settingLeft: {
     flex: 1,
@@ -520,13 +539,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
+  settingLabelDark: {
+    color: '#e0dcdc',
+  },
   settingSubtext: {
     fontSize: 14,
-    color: '#999',
+    color: '#777575',
     marginTop: 2,
   },
   subtextDark: {
-    color: '#666',
+    color: '#c1b8b8',
   },
   modalOverlay: {
     flex: 1,

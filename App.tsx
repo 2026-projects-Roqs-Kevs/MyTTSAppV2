@@ -49,7 +49,14 @@ const AppNavigator = () => {
         <Stack.Screen
           name="WordList"
           component={WordListScreen}
-          options={{headerShown: true, title: 'Word List'}}
+          options={{
+            headerShown: true,
+            title: 'Word Lists',
+            headerStyle: {
+              backgroundColor: isDarkMode ? '#535B58' : '#ffffff',
+            },
+            headerTintColor: isDarkMode ? '#ffffff' : '#000000',
+          }}
         />
       </Stack.Navigator>
     </NavigationContainer>

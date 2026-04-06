@@ -347,7 +347,7 @@ const STTScreen = () => {
   };
 
   const pinchRef = React.useRef({
-    initialDistance: 0,
+    initialDistance: 1, // Change from 0 to 1
     initialFontSize: transcriptFontSize,
   });
 
@@ -358,40 +358,56 @@ const STTScreen = () => {
     transcriptFontSizeRef.current = transcriptFontSize;
   }, [transcriptFontSize]);
 
-  const panResponderSecond = React.useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: evt => evt.nativeEvent.touches.length === 2,
-      onMoveShouldSetPanResponder: evt => evt.nativeEvent.touches.length === 2,
-      onPanResponderGrant: evt => {
-        const touches = evt.nativeEvent.touches;
-        if (touches.length === 2) {
-          const dx = touches[0].pageX - touches[1].pageX;
-          const dy = touches[0].pageY - touches[1].pageY;
-          pinchRef.current.initialDistance = Math.sqrt(dx * dx + dy * dy);
+  const panResponderSecond = React.useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: evt => {
+          console.log('onStart touches:', evt.nativeEvent.touches.length);
+          return evt.nativeEvent.touches.length === 2;
+        },
+        onMoveShouldSetPanResponder: evt => {
+          console.log('onMove touches:', evt.nativeEvent.touches.length);
+          return evt.nativeEvent.touches.length === 2;
+        },
+        onPanResponderGrant: evt => {
+          console.log('GRANT - pinch started');
+          const touches = evt.nativeEvent.touches;
+          if (touches.length === 2) {
+            const dx = touches[0].pageX - touches[1].pageX;
+            const dy = touches[0].pageY - touches[1].pageY;
+            pinchRef.current.initialDistance = Math.sqrt(dx * dx + dy * dy);
+            pinchRef.current.initialFontSize = transcriptFontSizeRef.current;
+          }
+        },
+        onPanResponderMove: evt => {
+          const touches = evt.nativeEvent.touches;
+
+          if (touches.length === 2) {
+            const dx = touches[0].pageX - touches[1].pageX;
+            const dy = touches[0].pageY - touches[1].pageY;
+            const currentDistance = Math.sqrt(dx * dx + dy * dy);
+
+            if (currentDistance === 0 || !currentDistance) {
+              return;
+            }
+
+            const scale = currentDistance / pinchRef.current.initialDistance;
+            // Dampen the scale: reduce it to 30% of its movement
+            const dampedScale = 1 + (scale - 1) * 0.3;
+            const newSize = Math.max(
+              10,
+              Math.min(32, pinchRef.current.initialFontSize * dampedScale),
+            );
+            setTranscriptFontSize(Math.round(newSize));
+          }
+        },
+        onPanResponderRelease: () => {
+          console.log('RELEASE');
           pinchRef.current.initialFontSize = transcriptFontSizeRef.current;
-        }
-      },
-      onPanResponderMove: evt => {
-        const touches = evt.nativeEvent.touches;
-        if (touches.length === 2) {
-          const dx = touches[0].pageX - touches[1].pageX;
-          const dy = touches[0].pageY - touches[1].pageY;
-          const currentDistance = Math.sqrt(dx * dx + dy * dy);
-          const scale = currentDistance / pinchRef.current.initialDistance;
-          // Clamp scale to 0.9 - 1.1 range (only 10% change per pinch)
-          const clampedScale = Math.max(0.98, Math.min(1.02, scale));
-          const newSize = Math.max(
-            10,
-            Math.min(32, pinchRef.current.initialFontSize * clampedScale),
-          );
-          setTranscriptFontSize(Math.round(newSize));
-        }
-      },
-      onPanResponderRelease: () => {
-        pinchRef.current.initialFontSize = transcriptFontSizeRef.current;
-      },
-    }),
-  ).current;
+        },
+      }),
+    [],
+  );
 
   return (
     <View style={[styles.container, isDarkMode && styles.containerDark]}>
@@ -513,10 +529,11 @@ const STTScreen = () => {
 
               {/* Transcribed text — not editable */}
               <View
-                onTouchEnd={handleViewTouch}
                 {...panResponderSecond.panHandlers}
+                onTouchEnd={handleViewTouch}
                 style={{flex: 1}}>
                 <TextInput
+                  pointerEvents="none"
                   style={[
                     styles.transcribedInput,
                     isDarkMode && styles.transcribedInputDark,
