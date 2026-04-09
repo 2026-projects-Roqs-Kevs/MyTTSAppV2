@@ -266,7 +266,7 @@ const SettingsScreen = () => {
                     styles.settingLabel,
                     isDarkMode && styles.settingLabelDark,
                   ]}>
-                  WER Metrics
+                  Voice Metrics
                 </Text>
                 <Text
                   style={[

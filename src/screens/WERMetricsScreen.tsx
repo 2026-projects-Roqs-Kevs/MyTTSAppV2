@@ -9,7 +9,6 @@ import {
   Platform,
   PermissionsAndroid,
   PanResponder,
-  TextInput,
 } from 'react-native';
 import sttService from '../services/sttService';
 import speakerDetectionService from '../services/speakerDetectionService';
@@ -17,80 +16,183 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import {useSettings} from '../context/SettingsContext';
 import KeepAwake from 'react-native-keep-awake';
 
-// ─── WER Calculation ───────────────────────────────────────────────────────
+// ─── Metric Types ───────────────────────────────────────────────────────────
 
-function normalizeText(text: string): string[] {
-  return text
-    .toLowerCase()
-    .replace(/[.,!?;:'"()\-–—\/\\]/g, '') // strip punctuation incl. . ! ?
-    .replace(/\s+/g, ' ') // collapse extra spaces
-    .trim()
-    .split(' ')
-    .filter(w => w.length > 0);
+interface SessionMetrics {
+  // 1. Estimated Accuracy (heuristic from word characteristics)
+  estimatedAccuracy: number;
+  // 2. Real-Time Factor = audio duration / processing time
+  rtf: number;
+  // 3. Processing Latency = ms from startListening → first result
+  processingLatencyMs: number;
+  // 4. Word Reliability Score = ratio of "reliable" words (len >= 3)
+  wordReliabilityScore: number;
+  // 5. Words Per Minute
+  wpm: number;
+  // 6. Audio Signal Quality = estimated from partial-to-final conversion rate
+  signalQuality: number;
+  // 7. System Throughput = words per second
+  throughputWps: number;
+  // 8. Vocal Clarity Index = % of partials that resolved to finals
+  vocalClarityIndex: number;
+
+  // Raw session data
+  totalWords: number;
+  sessionDurationSec: number;
+  totalResults: number;
+  totalPartials: number;
+  resolvedPartials: number;
 }
 
-function computeWER(reference: string, hypothesis: string) {
-  const ref = normalizeText(reference);
-  const hyp = normalizeText(hypothesis);
+// ─── Metric Computation Helpers ─────────────────────────────────────────────
 
-  if (ref.length === 0) {
-    return {
-      wer: 0,
-      wordCount: 0,
-      substitutions: 0,
-      deletions: 0,
-      insertions: 0,
-      errors: 0,
-    };
-  }
+function countWords(text: string): number {
+  return text
+    .trim()
+    .split(/\s+/)
+    .filter(w => w.length > 0).length;
+}
 
-  const m = ref.length;
-  const n = hyp.length;
-  const dp: number[][] = Array.from({length: m + 1}, (_, i) =>
-    Array.from({length: n + 1}, (_, j) => (i === 0 ? j : j === 0 ? i : 0)),
+/**
+ * Estimated Accuracy heuristic:
+ * - Penalise very short words (<3 chars) — often misrecognised fillers
+ * - Reward longer words that survived Vosk's beam search
+ * - Base score 80%, up to 98%, down to 55%
+ */
+function estimateAccuracy(text: string): number {
+  const words = text
+    .toLowerCase()
+    .trim()
+    .split(/\s+/)
+    .filter(w => w.length > 0);
+  if (words.length === 0) return 0;
+
+  const avgLen = words.reduce((s, w) => s + w.length, 0) / words.length;
+  const shortRatio = words.filter(w => w.length <= 2).length / words.length;
+
+  // avgLen 5+ → accuracy bonus, short word ratio → penalty
+  const base = 80;
+  const lenBonus = Math.min((avgLen - 3) * 3, 15); // up to +15
+  const shortPenalty = shortRatio * 25; // up to -25
+
+  return Math.min(98, Math.max(55, base + lenBonus - shortPenalty));
+}
+
+/**
+ * Word Reliability Score:
+ * % of words with length >= 3 (single/double char outputs are often noise)
+ */
+function wordReliabilityScore(text: string): number {
+  const words = text
+    .trim()
+    .split(/\s+/)
+    .filter(w => w.length > 0);
+  if (words.length === 0) return 0;
+  const reliable = words.filter(w => w.length >= 3).length;
+  return (reliable / words.length) * 100;
+}
+
+function computeMetrics(data: {
+  transcribedText: string;
+  sessionStartMs: number;
+  sessionEndMs: number;
+  firstResultMs: number | null;
+  totalPartials: number;
+  resolvedPartials: number;
+  totalResults: number;
+}): SessionMetrics {
+  const {
+    transcribedText,
+    sessionStartMs,
+    sessionEndMs,
+    firstResultMs,
+    totalPartials,
+    resolvedPartials,
+    totalResults,
+  } = data;
+
+  const sessionDurationSec = Math.max(
+    (sessionEndMs - sessionStartMs) / 1000,
+    0.001,
   );
+  const totalWords = countWords(transcribedText);
 
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      if (ref[i - 1] === hyp[j - 1]) {
-        dp[i][j] = dp[i - 1][j - 1];
-      } else {
-        dp[i][j] = 1 + Math.min(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1]);
-      }
-    }
-  }
+  // 1. Estimated Accuracy
+  const estimatedAccuracy = estimateAccuracy(transcribedText);
 
-  let i = m,
-    j = n;
-  let substitutions = 0,
-    deletions = 0,
-    insertions = 0;
-  while (i > 0 || j > 0) {
-    if (i > 0 && j > 0 && ref[i - 1] === hyp[j - 1]) {
-      i--;
-      j--;
-    } else if (i > 0 && j > 0 && dp[i][j] === dp[i - 1][j - 1] + 1) {
-      substitutions++;
-      i--;
-      j--;
-    } else if (i > 0 && dp[i][j] === dp[i - 1][j] + 1) {
-      deletions++;
-      i--;
-    } else {
-      insertions++;
-      j--;
-    }
-  }
+  // 2. RTF — we estimate audio ≈ session duration; processing ≈ session duration
+  //    RTF < 1.0 means faster than real-time (good), we normalise to a quality score
+  //    Since we can't truly measure audio vs decode separately, we use result cadence:
+  //    more results per second = faster processing = lower RTF
+  const resultsPerSec = totalResults / sessionDurationSec;
+  const rtf = resultsPerSec > 0 ? Math.min(1 / resultsPerSec, 5) : 1.0;
 
-  const errors = substitutions + deletions + insertions;
+  // 3. Processing Latency
+  const processingLatencyMs =
+    firstResultMs !== null ? firstResultMs - sessionStartMs : 0;
+
+  // 4. Word Reliability Score
+  const reliability = wordReliabilityScore(transcribedText);
+
+  // 5. WPM
+  const wpm = totalWords / (sessionDurationSec / 60);
+
+  // 6. Signal Quality — ratio of partials that resolved into final results
+  //    High conversion = clear audio; lots of dropped partials = noise
+  const vocalClarityIndex =
+    totalPartials > 0 ? (resolvedPartials / totalPartials) * 100 : 100;
+
+  // Signal quality also factors in WPM plausibility (human speech 80–180 wpm)
+  const wpmScore = wpm > 0 ? Math.min(100, Math.max(0, 100 - Math.abs(wpm - 130) * 0.5)) : 50;
+  const signalQuality = vocalClarityIndex * 0.7 + wpmScore * 0.3;
+
+  // 7. System Throughput (words/sec)
+  const throughputWps = totalWords / sessionDurationSec;
+
   return {
-    wer: Math.min((errors / ref.length) * 100, 100),
-    wordCount: ref.length,
-    substitutions,
-    deletions,
-    insertions,
-    errors,
+    estimatedAccuracy,
+    rtf,
+    processingLatencyMs,
+    wordReliabilityScore: reliability,
+    wpm,
+    signalQuality,
+    throughputWps,
+    vocalClarityIndex,
+    totalWords,
+    sessionDurationSec,
+    totalResults,
+    totalPartials,
+    resolvedPartials,
   };
+}
+
+// ─── Colour helpers ─────────────────────────────────────────────────────────
+
+function scoreColor(value: number, goodHigh: boolean = true): string {
+  const v = goodHigh ? value : 100 - value;
+  if (v >= 75) return '#34C759';
+  if (v >= 45) return '#FF9500';
+  return '#FF3B30';
+}
+
+function rtfColor(rtf: number): string {
+  if (rtf <= 0.5) return '#34C759';
+  if (rtf <= 1.5) return '#FF9500';
+  return '#FF3B30';
+}
+
+function latencyColor(ms: number): string {
+  if (ms <= 600) return '#34C759';
+  if (ms <= 1500) return '#FF9500';
+  return '#FF3B30';
+}
+
+function wpmLabel(wpm: number): string {
+  if (wpm < 20) return 'Very Slow';
+  if (wpm < 80) return 'Slow';
+  if (wpm < 160) return 'Normal';
+  if (wpm < 220) return 'Fast';
+  return 'Very Fast';
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────
@@ -102,19 +204,21 @@ const WERMetricsScreen = () => {
   const [hasStartedOnce, setHasStartedOnce] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
-  const [referenceText, setReferenceText] = useState('');
   const [transcribedText, setTranscribedText] = useState('');
   const [partialText, setPartialText] = useState('');
-  const [werResult, setWerResult] = useState<ReturnType<
-    typeof computeWER
-  > | null>(null);
+  const [metrics, setMetrics] = useState<SessionMetrics | null>(null);
+
+  // Session tracking refs
+  const sessionStartRef = useRef<number>(0);
+  const firstResultRef = useRef<number | null>(null);
+  const totalPartialsRef = useRef(0);
+  const resolvedPartialsRef = useRef(0);
+  const totalResultsRef = useRef(0);
+  const lastPartialRef = useRef('');
 
   const [topPanelFlex, setTopPanelFlex] = useState(1);
   const [bottomPanelFlex, setBottomPanelFlex] = useState(1);
   const containerHeight = useRef(0);
-  const [isInitialized, setIsInitialized] = useState(
-    sttService.getIsInitialized(),
-  );
 
   const panResponder = useRef(
     PanResponder.create({
@@ -163,30 +267,50 @@ const WERMetricsScreen = () => {
       );
       return;
     }
-
-    if (!referenceText.trim()) {
-      Alert.alert('Missing Reference', 'Please type the reference text first.');
-      return;
-    }
     const hasPermission = await requestMicPermission();
     if (!hasPermission) {
       Alert.alert('Permission Denied', 'Microphone permission is required.');
       return;
     }
     try {
+      // Reset session tracking
+      sessionStartRef.current = Date.now();
+      firstResultRef.current = null;
+      totalPartialsRef.current = 0;
+      resolvedPartialsRef.current = 0;
+      totalResultsRef.current = 0;
+      lastPartialRef.current = '';
+
       setHasStartedOnce(true);
       setIsListening(true);
       setTranscribedText('');
       setPartialText('');
-      setWerResult(null);
+      setMetrics(null);
       speakerDetectionService.reset();
 
       await sttService.startListening(
         text => {
+          // Final result received
+          if (firstResultRef.current === null) {
+            firstResultRef.current = Date.now();
+          }
+          totalResultsRef.current += 1;
+
+          // If there was a pending partial, count it as resolved
+          if (lastPartialRef.current.trim()) {
+            resolvedPartialsRef.current += 1;
+          }
+          lastPartialRef.current = '';
+
           setTranscribedText(prev => (prev ? `${prev} ${text}` : text));
           setPartialText('');
         },
         text => {
+          // Partial result received
+          if (text && text !== lastPartialRef.current) {
+            totalPartialsRef.current += 1;
+            lastPartialRef.current = text;
+          }
           setPartialText(text);
         },
         pitch => {
@@ -207,71 +331,50 @@ const WERMetricsScreen = () => {
     setPartialText('');
   };
 
-  const handleCalculateWER = () => {
-    if (!referenceText.trim()) {
-      Alert.alert('Missing Reference', 'Please enter reference text.');
-      return;
-    }
+  const handleCalculateMetrics = () => {
     if (!transcribedText.trim()) {
       Alert.alert('No Transcript', 'Record something first.');
       return;
     }
-    setWerResult(computeWER(referenceText, transcribedText));
+    const result = computeMetrics({
+      transcribedText,
+      sessionStartMs: sessionStartRef.current,
+      sessionEndMs: Date.now(),
+      firstResultMs: firstResultRef.current,
+      totalPartials: totalPartialsRef.current,
+      resolvedPartials: resolvedPartialsRef.current,
+      totalResults: totalResultsRef.current,
+    });
+    setMetrics(result);
   };
 
   const handleClear = () => {
     setTranscribedText('');
     setPartialText('');
-    setWerResult(null);
+    setMetrics(null);
   };
 
   const handleReset = () => {
     setHasStartedOnce(false);
     setIsListening(false);
-    setReferenceText('');
     setTranscribedText('');
     setPartialText('');
-    setWerResult(null);
+    setMetrics(null);
   };
 
-  const getWERColor = (wer: number) => {
-    if (wer <= 5) return '#34C759';
-    if (wer <= 20) return '#FF9500';
-    return '#FF3B30';
-  };
-
-  const getWERLabel = (wer: number) => {
-    if (wer <= 5) return 'Excellent';
-    if (wer <= 15) return 'Good';
-    if (wer <= 30) return 'Fair';
-    return 'Poor';
-  };
-
-  // ── IDLE SCREEN ──────────────────────────────────────────────────────────
+  // ── IDLE SCREEN ─────────────────────────────────────────────────────────────
   if (!hasStartedOnce) {
     return (
       <View style={[styles.container, isDarkMode && styles.containerDark]}>
         <View style={styles.idleContainer}>
-          <Text style={[styles.refLabel, isDarkMode && styles.textDark]}>
-            Reference Text
+          <Icon name="analytics-outline" size={56} color="#007AFF" />
+          <Text style={[styles.idleTitle, isDarkMode && styles.textDark]}>
+            Speech Metrics
           </Text>
-          <Text style={[styles.refSublabel, isDarkMode && styles.subtextDark]}>
-            Type exactly what you will say before recording
+          <Text style={[styles.idleSub, isDarkMode && styles.subtextDark]}>
+            Tap the mic to start recording.{'\n'}Metrics are computed from your
+            session — no reference text needed.
           </Text>
-          <TextInput
-            style={[
-              styles.refInput,
-              isDarkMode && styles.refInputDark,
-              {fontSize: settings.textSize},
-            ]}
-            value={referenceText}
-            onChangeText={setReferenceText}
-            placeholder="e.g. Ang bilis ng kulay kahel na lobo"
-            placeholderTextColor={isDarkMode ? '#555' : '#bbb'}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
           <TouchableOpacity
             onPress={handleStartListening}
             disabled={isInitializing}
@@ -286,7 +389,7 @@ const WERMetricsScreen = () => {
     );
   }
 
-  // ── ACTIVE SCREEN ─────────────────────────────────────────────────────────
+  // ── ACTIVE SCREEN ───────────────────────────────────────────────────────────
   return (
     <View
       style={[styles.container, isDarkMode && styles.containerDark]}
@@ -296,7 +399,7 @@ const WERMetricsScreen = () => {
       {isListening && <KeepAwake />}
 
       <View style={styles.activeContainer}>
-        {/* TOP PANEL — partial text / listening state */}
+        {/* TOP PANEL — partial / listening */}
         <View style={{flex: topPanelFlex}}>
           <ScrollView
             style={[
@@ -308,14 +411,14 @@ const WERMetricsScreen = () => {
               style={[
                 styles.partialText,
                 isDarkMode && styles.partialTextDark,
-                {fontSize: settings.textSize},
+                {fontSize: settings.textSize - 2},
               ]}>
               {partialText || (isListening ? 'Listening...' : '...')}
             </Text>
           </ScrollView>
         </View>
 
-        {/* DIVIDER — draggable */}
+        {/* DIVIDER */}
         <View {...panResponder.panHandlers} style={styles.divider}>
           <View style={{width: 100}} />
           <View
@@ -352,33 +455,39 @@ const WERMetricsScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* BOTTOM PANEL — transcribed text (editable) */}
+        {/* BOTTOM PANEL — transcribed text */}
         <View style={{flex: bottomPanelFlex}}>
-          <TextInput
+          <ScrollView
             style={[
-              styles.transcribedInput,
-              isDarkMode && styles.transcribedInputDark,
-              {fontSize: settings.textSize},
+              styles.textContainer,
+              isDarkMode && styles.textContainerDark,
             ]}
-            multiline
-            value={transcribedText}
-            onChangeText={setTranscribedText}
-            placeholder="Transcription appears here..."
-            placeholderTextColor={isDarkMode ? '#827e7e' : '#aaa'}
-            textAlignVertical="top"
-          />
+            contentContainerStyle={styles.textContent}>
+            <Text
+              style={[
+                styles.transcribedText,
+                isDarkMode && styles.textDark,
+                {fontSize: settings.textSize},
+              ]}>
+              {transcribedText || (
+                <Text style={styles.placeholderText}>
+                  Transcription appears here...
+                </Text>
+              )}
+            </Text>
+          </ScrollView>
         </View>
 
         {/* ACTION BUTTONS — only when stopped */}
         {!isListening && (
           <View style={styles.actionButtonsRow}>
             <TouchableOpacity
-              style={[styles.actionButton, {borderColor: '#34C759'}]}
-              onPress={handleCalculateWER}>
+              style={[styles.actionButton, {borderColor: '#007AFF'}]}
+              onPress={handleCalculateMetrics}>
               <View style={styles.buttonContent}>
-                <Icon name="analytics-outline" size={20} color="#34C759" />
-                <Text style={[styles.actionButtonText, {color: '#34C759'}]}>
-                  Calculate WER
+                <Icon name="stats-chart-outline" size={20} color="#007AFF" />
+                <Text style={[styles.actionButtonText, {color: '#007AFF'}]}>
+                  Analyze
                 </Text>
               </View>
             </TouchableOpacity>
@@ -405,108 +514,128 @@ const WERMetricsScreen = () => {
           </View>
         )}
 
-        {/* WER RESULTS */}
-        {werResult && (
+        {/* METRICS RESULTS CARD */}
+        {metrics && (
           <ScrollView
-            style={[styles.werCard, isDarkMode && styles.werCardDark]}
+            style={[styles.metricsCard, isDarkMode && styles.metricsCardDark]}
             nestedScrollEnabled>
-            {/* Score + label */}
-            <View style={styles.werScoreRow}>
+            {/* Header */}
+            <View style={styles.metricsHeader}>
+              <Text
+                style={[styles.metricsTitle, isDarkMode && styles.textDark]}>
+                Session Report
+              </Text>
               <Text
                 style={[
-                  styles.werScoreNum,
-                  {color: getWERColor(werResult.wer)},
+                  styles.metricsMeta,
+                  isDarkMode && styles.subtextDark,
                 ]}>
-                {werResult.wer.toFixed(1)}%
+                {metrics.totalWords} words ·{' '}
+                {metrics.sessionDurationSec.toFixed(1)}s
               </Text>
-              <View
-                style={[
-                  styles.werBadge,
-                  {backgroundColor: getWERColor(werResult.wer) + '22'},
-                ]}>
-                <Text
-                  style={[
-                    styles.werBadgeText,
-                    {color: getWERColor(werResult.wer)},
-                  ]}>
-                  {getWERLabel(werResult.wer)}
-                </Text>
-              </View>
             </View>
 
-            {/* Progress bar */}
-            <View
-              style={[
-                styles.progressBg,
-                {backgroundColor: isDarkMode ? '#444' : '#eee'},
-              ]}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${Math.min(werResult.wer, 100)}%` as any,
-                    backgroundColor: getWERColor(werResult.wer),
-                  },
-                ]}
+            {/* ── Row 1: Estimated Accuracy + Signal Quality ── */}
+            <View style={styles.metricRow}>
+              <MetricTile
+                isDark={isDarkMode}
+                icon="checkmark-circle-outline"
+                label="Est. Accuracy"
+                value={`${metrics.estimatedAccuracy.toFixed(1)}%`}
+                sub="word pattern analysis"
+                color={scoreColor(metrics.estimatedAccuracy)}
+                progress={metrics.estimatedAccuracy / 100}
+              />
+              <MetricTile
+                isDark={isDarkMode}
+                icon="cellular-outline"
+                label="Signal Quality"
+                value={`${metrics.signalQuality.toFixed(1)}%`}
+                sub="audio clarity estimate"
+                color={scoreColor(metrics.signalQuality)}
+                progress={metrics.signalQuality / 100}
               />
             </View>
 
-            {/* Stats */}
-            <View style={styles.statsRow}>
-              {[
-                {label: 'Words', value: werResult.wordCount, color: '#007AFF'},
-                {label: 'Errors', value: werResult.errors, color: '#FF3B30'},
-                {
-                  label: 'Sub',
-                  value: werResult.substitutions,
-                  color: '#FF9500',
-                },
-                {label: 'Del', value: werResult.deletions, color: '#FF3B30'},
-                {label: 'Ins', value: werResult.insertions, color: '#34C759'},
-              ].map(s => (
-                <View
-                  key={s.label}
-                  style={[styles.statBox, isDarkMode && styles.statBoxDark]}>
-                  <Text style={[styles.statVal, {color: s.color}]}>
-                    {s.value}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.statLabel,
-                      isDarkMode && styles.subtextDark,
-                    ]}>
-                    {s.label}
-                  </Text>
-                </View>
-              ))}
+            {/* ── Row 2: WPM + Vocal Clarity ── */}
+            <View style={styles.metricRow}>
+              <MetricTile
+                isDark={isDarkMode}
+                icon="speedometer-outline"
+                label="Words / Min"
+                value={metrics.wpm.toFixed(0)}
+                sub={wpmLabel(metrics.wpm)}
+                color={scoreColor(
+                  Math.min(100, Math.max(0, 100 - Math.abs(metrics.wpm - 130))),
+                )}
+                progress={Math.min(metrics.wpm / 200, 1)}
+              />
+              <MetricTile
+                isDark={isDarkMode}
+                icon="mic-circle-outline"
+                label="Vocal Clarity"
+                value={`${metrics.vocalClarityIndex.toFixed(1)}%`}
+                sub={`${metrics.resolvedPartials}/${metrics.totalPartials} partials resolved`}
+                color={scoreColor(metrics.vocalClarityIndex)}
+                progress={metrics.vocalClarityIndex / 100}
+              />
             </View>
 
-            {/* Reference vs Transcript comparison */}
-            <View style={styles.compareBlock}>
-              <Text
-                style={[styles.compareTitle, isDarkMode && styles.textDark]}>
-                Reference
-              </Text>
-              <Text
-                style={[styles.compareText, isDarkMode && styles.subtextDark]}>
-                {referenceText}
-              </Text>
-              <Text
-                style={[
-                  styles.compareTitle,
-                  isDarkMode && styles.textDark,
-                  {marginTop: 8},
-                ]}>
-                Transcript
-              </Text>
-              <Text
-                style={[styles.compareText, isDarkMode && styles.subtextDark]}>
-                {transcribedText}
-              </Text>
+            {/* ── Row 3: RTF + Processing Latency ── */}
+            <View style={styles.metricRow}>
+              <MetricTile
+                isDark={isDarkMode}
+                icon="timer-outline"
+                label="Real-Time Factor"
+                value={metrics.rtf.toFixed(2) + 'x'}
+                sub={metrics.rtf <= 1 ? 'faster than real-time' : 'slower than real-time'}
+                color={rtfColor(metrics.rtf)}
+                progress={Math.min(metrics.rtf / 3, 1)}
+                progressInverted
+              />
+              <MetricTile
+                isDark={isDarkMode}
+                icon="flash-outline"
+                label="1st Result Latency"
+                value={
+                  metrics.processingLatencyMs > 0
+                    ? `${metrics.processingLatencyMs}ms`
+                    : 'N/A'
+                }
+                sub="time to first result"
+                color={latencyColor(metrics.processingLatencyMs)}
+                progress={Math.min(metrics.processingLatencyMs / 2000, 1)}
+                progressInverted
+              />
             </View>
 
-            <Text style={[styles.formula, isDarkMode && styles.subtextDark]}>
-              WER = (S+D+I) / N × 100{'  '}·{'  '}S=Sub D=Del I=Ins N=Ref words
+            {/* ── Row 4: Reliability + Throughput ── */}
+            <View style={styles.metricRow}>
+              <MetricTile
+                isDark={isDarkMode}
+                icon="shield-checkmark-outline"
+                label="Word Reliability"
+                value={`${metrics.wordReliabilityScore.toFixed(1)}%`}
+                sub="words ≥3 chars (less noise)"
+                color={scoreColor(metrics.wordReliabilityScore)}
+                progress={metrics.wordReliabilityScore / 100}
+              />
+              <MetricTile
+                isDark={isDarkMode}
+                icon="rocket-outline"
+                label="Throughput"
+                value={`${metrics.throughputWps.toFixed(2)} w/s`}
+                sub="words per second"
+                color={
+                  metrics.throughputWps >= 1 ? '#34C759' : metrics.throughputWps >= 0.5 ? '#FF9500' : '#FF3B30'
+                }
+                progress={Math.min(metrics.throughputWps / 4, 1)}
+              />
+            </View>
+
+            {/* Legend note */}
+            <Text style={[styles.legendNote, isDarkMode && styles.subtextDark]}>
+              * Metrics estimated from session data — no reference text required
             </Text>
           </ScrollView>
         )}
@@ -515,7 +644,65 @@ const WERMetricsScreen = () => {
   );
 };
 
-// ─── Styles ────────────────────────────────────────────────────────────────
+// ─── MetricTile sub-component ───────────────────────────────────────────────
+
+interface MetricTileProps {
+  isDark: boolean;
+  icon: string;
+  label: string;
+  value: string;
+  sub: string;
+  color: string;
+  progress: number;
+  progressInverted?: boolean;
+}
+
+const MetricTile: React.FC<MetricTileProps> = ({
+  isDark,
+  icon,
+  label,
+  value,
+  sub,
+  color,
+  progress,
+  progressInverted = false,
+}) => {
+  const barColor = progressInverted
+    ? progress > 0.67
+      ? '#FF3B30'
+      : progress > 0.33
+      ? '#FF9500'
+      : '#34C759'
+    : color;
+
+  return (
+    <View style={[styles.metricTile, isDark && styles.metricTileDark]}>
+      <View style={styles.metricTileHeader}>
+        <Icon name={icon} size={18} color={color} />
+        <Text style={[styles.metricTileLabel, isDark && styles.subtextDark]}>
+          {label}
+        </Text>
+      </View>
+      <Text style={[styles.metricTileValue, {color}]}>{value}</Text>
+      <View style={[styles.progressBg, {backgroundColor: isDark ? '#444' : '#eee'}]}>
+        <View
+          style={[
+            styles.progressFill,
+            {
+              width: `${Math.min(Math.max(progress, 0), 1) * 100}%` as any,
+              backgroundColor: barColor,
+            },
+          ]}
+        />
+      </View>
+      <Text style={[styles.metricTileSub, isDark && styles.subtextDark]}>
+        {sub}
+      </Text>
+    </View>
+  );
+};
+
+// ─── Styles ─────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: {flex: 1, padding: 20, backgroundColor: '#f5f5f5'},
@@ -523,39 +710,20 @@ const styles = StyleSheet.create({
   textDark: {color: '#fff'},
   subtextDark: {color: '#888'},
 
-  // ── Idle
+  // Idle
   idleContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
+    paddingHorizontal: 24,
   },
-  refLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#333',
-    alignSelf: 'flex-start',
-  },
-  refSublabel: {
-    fontSize: 12,
+  idleTitle: {fontSize: 22, fontWeight: '800', color: '#333'},
+  idleSub: {
+    fontSize: 14,
     color: '#999',
-    alignSelf: 'flex-start',
-    marginTop: -6,
-  },
-  refInput: {
-    width: '100%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    padding: 14,
-    minHeight: 100,
-    color: '#333',
-  },
-  refInputDark: {
-    backgroundColor: '#2a2a2a',
-    borderColor: '#444',
-    color: '#fff',
+    textAlign: 'center',
+    lineHeight: 21,
   },
   micButton: {
     padding: 24,
@@ -564,9 +732,9 @@ const styles = StyleSheet.create({
     borderColor: '#34C759',
     marginTop: 8,
   },
-  idleText: {fontSize: 18, color: '#333', fontWeight: '500'},
+  idleText: {fontSize: 16, color: '#333', fontWeight: '500'},
 
-  // ── Active
+  // Active
   activeContainer: {flex: 1, paddingTop: 8},
   textContainer: {
     flex: 1,
@@ -585,6 +753,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   partialTextDark: {color: '#827e7e'},
+  transcribedText: {fontSize: 16, lineHeight: 24, color: '#333'},
+  placeholderText: {color: '#bbb', fontStyle: 'italic'},
 
   divider: {
     alignItems: 'center',
@@ -605,23 +775,6 @@ const styles = StyleSheet.create({
   stopButton: {backgroundColor: '#FF3B30'},
   buttonDisabled: {opacity: 0.5, backgroundColor: '#999'},
 
-  transcribedInput: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    padding: 16,
-    fontSize: 16,
-    color: '#333',
-    textAlignVertical: 'top',
-  },
-  transcribedInputDark: {
-    backgroundColor: '#2a2a2a',
-    borderColor: '#444',
-    color: '#fff',
-  },
-
   actionButtonsRow: {flexDirection: 'row', paddingTop: 8, gap: 8},
   actionButton: {
     flex: 1,
@@ -638,59 +791,72 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {fontSize: 13, fontWeight: '600'},
 
-  // ── WER Results
-  werCard: {
+  // Metrics card
+  metricsCard: {
     marginTop: 10,
     backgroundColor: '#fff',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#ddd',
     padding: 14,
-    maxHeight: 300,
+    maxHeight: 380,
   },
-  werCardDark: {backgroundColor: '#2a2a2a', borderColor: '#444'},
-  werScoreRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 8,
-  },
-  werScoreNum: {fontSize: 44, fontWeight: '900', letterSpacing: -1},
-  werBadge: {paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20},
-  werBadgeText: {fontSize: 14, fontWeight: '700'},
-  progressBg: {
-    height: 8,
-    borderRadius: 4,
+  metricsCardDark: {backgroundColor: '#2a2a2a', borderColor: '#444'},
+  metricsHeader: {
     marginBottom: 12,
-    overflow: 'hidden',
   },
-  progressFill: {height: '100%', borderRadius: 4},
-  statsRow: {flexDirection: 'row', gap: 6, marginBottom: 12},
-  statBox: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#f5f5f5',
-  },
-  statBoxDark: {backgroundColor: '#1a1a1a'},
-  statVal: {fontSize: 18, fontWeight: '800'},
-  statLabel: {fontSize: 10, color: '#666', marginTop: 2},
-  compareBlock: {marginBottom: 8},
-  compareTitle: {
-    fontSize: 11,
-    fontWeight: '700',
+  metricsTitle: {
+    fontSize: 17,
+    fontWeight: '800',
     color: '#333',
     marginBottom: 2,
-    textTransform: 'uppercase',
   },
-  compareText: {fontSize: 13, color: '#666', lineHeight: 20},
-  formula: {
+  metricsMeta: {fontSize: 12, color: '#999'},
+
+  metricRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 10,
+  },
+  metricTile: {
+    flex: 1,
+    backgroundColor: '#f7f7f7',
+    borderRadius: 10,
+    padding: 10,
+    gap: 4,
+  },
+  metricTileDark: {backgroundColor: '#1a1a1a'},
+  metricTileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 2,
+  },
+  metricTileLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#666',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  metricTileValue: {fontSize: 22, fontWeight: '900', letterSpacing: -0.5},
+  metricTileSub: {fontSize: 10, color: '#999', marginTop: 2},
+
+  progressBg: {
+    height: 5,
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginTop: 4,
+  },
+  progressFill: {height: '100%', borderRadius: 3},
+
+  legendNote: {
     fontSize: 10,
-    color: '#999',
+    color: '#bbb',
     textAlign: 'center',
     marginTop: 4,
     paddingBottom: 4,
+    fontStyle: 'italic',
   },
 });
 

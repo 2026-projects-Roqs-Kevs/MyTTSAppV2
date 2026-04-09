@@ -44,7 +44,7 @@ const AppNavigator = () => {
         <Stack.Screen
           name="WERMetrics"
           component={WERMetricsScreen}
-          options={{headerShown: true, title: 'WER Metrics'}}
+          options={{headerShown: true, title: 'Voice Metrics'}}
         />
         <Stack.Screen
           name="WordList"
