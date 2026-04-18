@@ -249,12 +249,11 @@ const SettingsScreen = () => {
         </TouchableOpacity>
       </View> */}
       {/* Tools & Diagnostics Section */}
-      <View style={styles.section}>
+      {/* <View style={styles.section}>
         <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
           Tools & Diagnostics
         </Text>
 
-        {/* ── WER Metrics ── */}
         <TouchableOpacity
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
           onPress={() => navigation.navigate('WERMetrics' as never)}>
@@ -278,9 +277,8 @@ const SettingsScreen = () => {
               </View>
             </View>
           </View>
-          {/* <Icon name="chevron-forward" size={20} color="#999" /> */}
         </TouchableOpacity>
-      </View>
+      </View> */}
 
       {/* About Section */}
       <View style={styles.section}>
