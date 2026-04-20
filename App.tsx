@@ -11,6 +11,7 @@ import {SettingsProvider, useSettings} from './src/context/SettingsContext';
 import WERMetricsScreen from './src/screens/WERMetricsScreen';
 import taglishCorrectionService from './src/services/taglishCorrectionService';
 import WordListScreen from './src/screens/WordListScreen';
+import AboutScreen from './src/screens/AboutScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -24,6 +25,7 @@ const AppNavigator = () => {
         initialRouteName="STT"
         screenOptions={{headerShown: false}}>
         <Stack.Screen name="STT" component={STTScreen} />
+        <Stack.Screen name="About" component={AboutScreen} />
         <Stack.Screen
           name="Transcriptions"
           component={TranscribeScreen}

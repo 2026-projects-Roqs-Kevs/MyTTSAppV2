@@ -57,10 +57,6 @@ const SettingsScreen = () => {
               ]}>
               Text Size
             </Text>
-            {/* <Text
-              style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
-              Current: {settings.textSize} (default: 16)
-            </Text> */}
           </View>
         </TouchableOpacity>
 
@@ -217,10 +213,6 @@ const SettingsScreen = () => {
               ]}>
               Noise Reduction
             </Text>
-            {/* <Text
-              style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
-              Filter background noise during recording
-            </Text> */}
           </View>
           <Switch
             value={settings.noiseReduction}
@@ -230,60 +222,10 @@ const SettingsScreen = () => {
         </View>
       </View>
 
-      {/* Saved Transcriptions */}
-      {/* <View style={styles.section}>
-        <TouchableOpacity
-          style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
-          onPress={() => navigation.navigate('Transcriptions' as never)}>
-          <View style={styles.settingLeft}>
-            <Icon
-              name="document-text-outline"
-              size={24}
-              color="#007AFF"
-              style={styles.settingIcon}
-            />
-            <Text style={[styles.settingLabel, isDarkMode && styles.settingLabelDark]}>
-              Saved Transcriptions
-            </Text>
-          </View>
-        </TouchableOpacity>
-      </View> */}
-      {/* Tools & Diagnostics Section */}
-      {/* <View style={styles.section}>
-        <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
-          Tools & Diagnostics
-        </Text>
-
-        <TouchableOpacity
-          style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
-          onPress={() => navigation.navigate('WERMetrics' as never)}>
-          <View style={styles.settingLeft}>
-            <View>
-              <View>
-                <Text
-                  style={[
-                    styles.settingLabel,
-                    isDarkMode && styles.settingLabelDark,
-                  ]}>
-                  Voice Metrics
-                </Text>
-                <Text
-                  style={[
-                    styles.settingSubtext,
-                    isDarkMode && styles.subtextDark,
-                  ]}>
-                  Test speech recognition accuracy
-                </Text>
-              </View>
-            </View>
-          </View>
-        </TouchableOpacity>
-      </View> */}
-
-      {/* About Section */}
+      {/* Support Section */}
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
-          About
+          Support
         </Text>
 
         <TouchableOpacity
@@ -314,6 +256,39 @@ const SettingsScreen = () => {
           </View>
         </TouchableOpacity>
       </View>
+
+      {/* ── About Section ── ADDED AT BOTTOM ────────────────────────────────── */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
+          About
+        </Text>
+
+        <TouchableOpacity
+          style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
+          onPress={() => navigation.navigate('About' as never)}>
+          <View style={styles.settingLeft}>
+            <Text
+              style={[
+                styles.settingLabel,
+                isDarkMode && styles.settingLabelDark,
+              ]}>
+              About EchoLink
+            </Text>
+            <Text
+              style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
+              Version, modules & how it works
+            </Text>
+          </View>
+          <Icon
+            name="chevron-forward"
+            size={18}
+            color={isDarkMode ? '#666' : '#bbb'}
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Bottom spacer */}
+      <View style={{height: 32}} />
 
       {/* Text Size Modal */}
       <Modal visible={showTextSizeModal} transparent animationType="fade">
