@@ -27,7 +27,7 @@ const SettingsScreen = () => {
   const [showTextSizeModal, setShowTextSizeModal] = useState(false);
 
   const handleSendFeedback = () => {
-    Linking.openURL('mailto:support@echolink.com?subject=EchoLinK Feedback');
+    Linking.openURL('mailto:echolink.email@gmail.com?subject=EchoLinK Feedback');
   };
 
   const handleOpenLicenses = () => {
