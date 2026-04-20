@@ -26,6 +26,7 @@ import {NativeModules} from 'react-native';
 import taglishCorrectionService from '../services/taglishCorrectionService';
 import WaveformView from '../components/WaveformView';
 import useAmplitude from '../hooks/useAmplitude';
+import RNFS from 'react-native-fs';
 const {Vosk} = NativeModules;
 
 // ─── Metric Types ────────────────────────────────────────────────────────────
@@ -495,6 +496,64 @@ const STTScreen = () => {
 
   const handleKeyboard = () => setKeyboard(prev => !prev);
 
+  const handleSaveMetrics = async () => {
+  if (!metrics) {
+    Alert.alert('No Metrics', 'Please analyze the session first.');
+    return;
+  }
+
+  try {
+    // Format the metrics data as text
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const fileName = `metrics_report_${timestamp}.txt`;
+    
+    const metricsText = `
+
+    SESSION METRICS REPORT                     
+    Generated: ${new Date().toLocaleString()}                          
+
+SESSION OVERVIEW
+  Total Words:           ${metrics.totalWords}
+  Session Duration:      ${metrics.sessionDurationSec.toFixed(1)} seconds
+  Total Results:         ${metrics.totalResults}
+  Total Partials:        ${metrics.totalPartials}
+  Resolved Partials:     ${metrics.resolvedPartials}
+
+ACCURACY & QUALITY
+  Estimated Accuracy:    ${metrics.estimatedAccuracy.toFixed(1)}%
+  Word Reliability:      ${metrics.wordReliabilityScore.toFixed(1)}%
+  Signal Quality:        ${metrics.signalQuality.toFixed(1)}%
+  Vocal Clarity:         ${metrics.vocalClarityIndex.toFixed(1)}%
+
+PERFORMANCE METRICS
+  Words Per Minute:      ${metrics.wpm.toFixed(0)} (${wpmLabel(metrics.wpm)})
+  Real-Time Factor:      ${metrics.rtf.toFixed(2)}x
+  First Result Latency:  ${metrics.processingLatencyMs > 0 ? `${metrics.processingLatencyMs}ms` : 'N/A'}
+  Throughput:            ${metrics.throughputWps.toFixed(2)} words/sec
+
+    `.trim();
+
+    // Determine the file path based on platform
+    const path = Platform.OS === 'android' 
+      ? `${RNFS.DownloadDirectoryPath}/${fileName}`
+      : `${RNFS.DocumentDirectoryPath}/${fileName}`;
+
+    // Write the file
+    await RNFS.writeFile(path, metricsText, 'utf8');
+    
+    Alert.alert(
+      'Success', 
+      `Metrics saved successfully!\n\nFile: ${fileName}`,
+      [
+        { text: 'OK' },
+      ]
+    );
+  } catch (error) {
+    console.error('Error saving metrics:', error);
+    Alert.alert('Error', 'Failed to save metrics file. Please try again.');
+  }
+};
+
   // ── Analyze button handler ───────────────────────────────────────────────
   const handleAnalyze = () => {
     if (!transcribedText.trim()) {
@@ -768,6 +827,14 @@ const STTScreen = () => {
                     {metrics.totalWords} words · {metrics.sessionDurationSec.toFixed(1)}s
                   </Text>
                 </View>
+                
+                {/* Add Save Button here */}
+                <TouchableOpacity
+                  onPress={handleSaveMetrics}
+                  style={[metricStyles.saveBtn, {marginRight: 8}]}>
+                  <Icon name="save-outline" size={20} color="#34C759" />
+                </TouchableOpacity>
+                
                 <TouchableOpacity
                   onPress={() => setShowMetrics(false)}
                   style={metricStyles.closeBtn}>
@@ -970,6 +1037,11 @@ const metricStyles = StyleSheet.create({
     marginTop: 4,
     paddingBottom: 8,
     fontStyle: 'italic',
+  },
+  saveBtn: {
+    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   textDark: {color: '#fff'},
   subtextDark: {color: '#888'},
