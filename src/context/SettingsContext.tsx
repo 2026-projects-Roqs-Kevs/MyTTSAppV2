@@ -24,7 +24,7 @@ export const SettingsProvider: React.FC<{children: ReactNode}> = ({
   children,
 }) => {
   const [settings, setSettings] = useState<AppSettings>({
-    textSize: 16,
+    fontFamily: 'sans-serif',
     theme: 'system',
     autoStartRecording: false,
     language: 'tl',

@@ -28,7 +28,7 @@ const MODULES = [
     title: 'Hidden Markov Model (HMM)',
     color: '#007AFF',
     description:
-      'A statistical model used at the core of Vosk\'s acoustic engine. An HMM represents speech as a sequence of hidden states (such as phonemes) with observable outputs (acoustic features). At each time step, the model estimates which phoneme is most likely being spoken based on audio signals. HMMs capture the temporal nature of speech by modeling how sounds transition from one to the next.',
+      "A statistical model used at the core of Vosk's acoustic engine. An HMM represents speech as a sequence of hidden states (such as phonemes) with observable outputs (acoustic features). At each time step, the model estimates which phoneme is most likely being spoken based on audio signals. HMMs capture the temporal nature of speech by modeling how sounds transition from one to the next.",
   },
   {
     icon: 'analytics-outline',
@@ -49,14 +49,14 @@ const MODULES = [
     title: 'Speaker Detection Service',
     color: '#AF52DE',
     description:
-      'A pitch-based heuristic service that tracks changes in speaker identity. By analyzing the fundamental frequency (pitch) of each speaker segment, it detects when a new person has started speaking. In multi-speaker mode, this labels transcript segments per detected speaker. In single-speaker mode, it filters out audio that doesn\'t match the reference speaker\'s pitch profile.',
+      "A pitch-based heuristic service that tracks changes in speaker identity. By analyzing the fundamental frequency (pitch) of each speaker segment, it detects when a new person has started speaking. In multi-speaker mode, this labels transcript segments per detected speaker. In single-speaker mode, it filters out audio that doesn't match the reference speaker's pitch profile.",
   },
   {
     icon: 'pulse-outline',
     title: 'WaveformView & Amplitude Hook',
     color: '#5AC8FA',
     description:
-      'A real-time audio visualization component that renders animated waveform bars driven by the microphone\'s amplitude levels. The useAmplitude hook samples the device\'s audio input and passes normalized volume data to the waveform renderer, giving users live visual feedback during transcription.',
+      "A real-time audio visualization component that renders animated waveform bars driven by the microphone's amplitude levels. The useAmplitude hook samples the device's audio input and passes normalized volume data to the waveform renderer, giving users live visual feedback during transcription.",
   },
   {
     icon: 'settings-outline',
@@ -94,14 +94,31 @@ interface ModuleCardProps {
   delay: number;
 }
 
-const ModuleCard: React.FC<ModuleCardProps> = ({icon, title, color, description, isDark, delay}) => {
+const ModuleCard: React.FC<ModuleCardProps> = ({
+  icon,
+  title,
+  color,
+  description,
+  isDark,
+  delay,
+}) => {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(18)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(opacity, {toValue: 1, duration: 350, delay, useNativeDriver: true}),
-      Animated.timing(translateY, {toValue: 0, duration: 350, delay, useNativeDriver: true}),
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 350,
+        delay,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 350,
+        delay,
+        useNativeDriver: true,
+      }),
     ]).start();
   }, []);
 
@@ -113,7 +130,8 @@ const ModuleCard: React.FC<ModuleCardProps> = ({icon, title, color, description,
         </View>
         <View style={{flex: 1, gap: 4}}>
           <Text style={[cardStyles.cardTitle, {color}]}>{title}</Text>
-          <Text style={[cardStyles.cardDesc, isDark && cardStyles.cardDescDark]}>
+          <Text
+            style={[cardStyles.cardDesc, isDark && cardStyles.cardDescDark]}>
             {description}
           </Text>
         </View>
@@ -134,8 +152,16 @@ const AboutScreen = () => {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(heroOpacity, {toValue: 1, duration: 500, useNativeDriver: true}),
-      Animated.spring(heroScale, {toValue: 1, friction: 7, useNativeDriver: true}),
+      Animated.timing(heroOpacity, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.spring(heroScale, {
+        toValue: 1,
+        friction: 7,
+        useNativeDriver: true,
+      }),
     ]).start();
   }, []);
 
@@ -143,37 +169,54 @@ const AboutScreen = () => {
     <ScrollView
       style={[styles.container, isDark && styles.containerDark]}
       contentContainerStyle={styles.content}>
-
       {/* Header */}
       <View style={[styles.header, isDark && styles.headerDark]}>
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => navigation.goBack()}>
-          <Icon name="chevron-back" size={24} color={isDark ? '#fff' : '#333'} />
+          <Icon
+            name="chevron-back"
+            size={24}
+            color={isDark ? '#fff' : '#333'}
+          />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, isDark && styles.textWhite]}>About</Text>
+        <Text style={[styles.headerTitle, isDark && styles.textWhite]}>
+          About
+        </Text>
         <View style={{width: 36}} />
       </View>
 
       {/* Hero */}
-      <Animated.View style={[styles.hero, {opacity: heroOpacity, transform: [{scale: heroScale}]}]}>
+      <Animated.View
+        style={[
+          styles.hero,
+          {opacity: heroOpacity, transform: [{scale: heroScale}]},
+        ]}>
         <View style={[styles.logoWrap, isDark && styles.logoWrapDark]}>
           <Image
             source={require('../../assets/bglogo.png')}
             style={styles.logo}
           />
         </View>
-        <Text style={[styles.appName, isDark && styles.textWhite]}>EchoLink</Text>
+        <Text style={[styles.appName, isDark && styles.textWhite]}>
+          EchoLink
+        </Text>
         <Text style={[styles.tagline, isDark && styles.taglineDark]}>
           Offline · Multilingual · Real-Time Transcription
         </Text>
         <View style={styles.badgeRow}>
-          <View style={styles.badge}><Text style={styles.badgeText}>v1.0.0</Text></View>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>v1.0.0</Text>
+          </View>
           <View style={[styles.badge, {backgroundColor: '#007AFF22'}]}>
-            <Text style={[styles.badgeText, {color: '#007AFF'}]}>React Native</Text>
+            <Text style={[styles.badgeText, {color: '#007AFF'}]}>
+              React Native
+            </Text>
           </View>
           <View style={[styles.badge, {backgroundColor: '#FF950022'}]}>
-            <Text style={[styles.badgeText, {color: '#FF9500'}]}>Tagalog + English</Text>
+            <Text style={[styles.badgeText, {color: '#FF9500'}]}>
+              Tagalog + English
+            </Text>
           </View>
         </View>
       </Animated.View>
@@ -181,10 +224,10 @@ const AboutScreen = () => {
       {/* Description */}
       <View style={[styles.descCard, isDark && styles.descCardDark]}>
         <Text style={[styles.descText, isDark && styles.descTextDark]}>
-          EchoLink is a fully offline, real-time speech-to-text application designed for
-          Filipino users. It supports seamless Taglish (Tagalog + English) transcription,
-          dynamic speaker detection, and session analytics — all without sending any audio
-          to the cloud.
+          EchoLink is a fully offline, real-time speech-to-text application
+          designed for Filipino users. It supports seamless Taglish (Tagalog +
+          English) transcription, dynamic speaker detection, and session
+          analytics — all without sending any audio to the cloud.
         </Text>
       </View>
 
@@ -194,29 +237,41 @@ const AboutScreen = () => {
       </Text>
 
       {MODULES.map((mod, i) => (
-        <ModuleCard
-          key={mod.title}
-          {...mod}
-          isDark={isDark}
-          delay={i * 60}
-        />
+        <ModuleCard key={mod.title} {...mod} isDark={isDark} delay={i * 60} />
       ))}
 
       {/* Tech Stack */}
-      <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark, {marginTop: 28}]}>
+      <Text
+        style={[
+          styles.sectionTitle,
+          isDark && styles.sectionTitleDark,
+          {marginTop: 28},
+        ]}>
         Tech Stack
       </Text>
       <View style={[styles.stackGrid, isDark && styles.stackGridDark]}>
         {TECH_STACK.map(item => (
-          <View key={item.label} style={[styles.stackItem, isDark && styles.stackItemDark]}>
-            <Text style={[styles.stackLabel, isDark && styles.textWhite]}>{item.label}</Text>
-            <Text style={[styles.stackVersion, isDark && styles.stackVersionDark]}>{item.version}</Text>
+          <View
+            key={item.label}
+            style={[styles.stackItem, isDark && styles.stackItemDark]}>
+            <Text style={[styles.stackLabel, isDark && styles.textWhite]}>
+              {item.label}
+            </Text>
+            <Text
+              style={[styles.stackVersion, isDark && styles.stackVersionDark]}>
+              {item.version}
+            </Text>
           </View>
         ))}
       </View>
 
       {/* HMM + Viterbi Deep Dive */}
-      <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark, {marginTop: 28}]}>
+      <Text
+        style={[
+          styles.sectionTitle,
+          isDark && styles.sectionTitleDark,
+          {marginTop: 28},
+        ]}>
         How Speech Recognition Works
       </Text>
       <View style={[styles.deepDive, isDark && styles.deepDiveDark]}>
@@ -225,19 +280,43 @@ const AboutScreen = () => {
         </Text>
 
         {[
-          {step: '1', label: 'Audio Capture', desc: 'The microphone captures raw PCM audio frames, which are windowed and transformed into Mel-Frequency Cepstral Coefficients (MFCCs) — a compact representation of the audio spectrum.'},
-          {step: '2', label: 'Acoustic Model (HMM)', desc: 'Each phoneme in the vocabulary is modeled as a Hidden Markov Model with emission probabilities (how likely is this MFCC given phoneme X?) and transition probabilities (how likely is phoneme X followed by Y?).'},
-          {step: '3', label: 'Viterbi Decoding', desc: 'Given the sequence of MFCC vectors, the Viterbi algorithm efficiently finds the path through the HMM state space that maximizes the joint probability of observations — yielding the most likely sequence of phonemes.'},
-          {step: '4', label: 'Language Model', desc: 'A n-gram language model scores word sequences by their statistical likelihood in the target language, allowing the decoder to prefer "I am going" over "eye ham go-ing" even if acoustic scores are similar.'},
-          {step: '5', label: 'Final Transcript', desc: 'The best-scoring word sequence is returned as the transcription result and displayed to the user in real time.'},
+          {
+            step: '1',
+            label: 'Audio Capture',
+            desc: 'The microphone captures raw PCM audio frames, which are windowed and transformed into Mel-Frequency Cepstral Coefficients (MFCCs) — a compact representation of the audio spectrum.',
+          },
+          {
+            step: '2',
+            label: 'Acoustic Model (HMM)',
+            desc: 'Each phoneme in the vocabulary is modeled as a Hidden Markov Model with emission probabilities (how likely is this MFCC given phoneme X?) and transition probabilities (how likely is phoneme X followed by Y?).',
+          },
+          {
+            step: '3',
+            label: 'Viterbi Decoding',
+            desc: 'Given the sequence of MFCC vectors, the Viterbi algorithm efficiently finds the path through the HMM state space that maximizes the joint probability of observations — yielding the most likely sequence of phonemes.',
+          },
+          {
+            step: '4',
+            label: 'Language Model',
+            desc: 'A n-gram language model scores word sequences by their statistical likelihood in the target language, allowing the decoder to prefer "I am going" over "eye ham go-ing" even if acoustic scores are similar.',
+          },
+          {
+            step: '5',
+            label: 'Final Transcript',
+            desc: 'The best-scoring word sequence is returned as the transcription result and displayed to the user in real time.',
+          },
         ].map(item => (
           <View key={item.step} style={styles.stepRow}>
             <View style={styles.stepBadge}>
               <Text style={styles.stepNum}>{item.step}</Text>
             </View>
             <View style={{flex: 1, gap: 2}}>
-              <Text style={[styles.stepLabel, isDark && styles.textWhite]}>{item.label}</Text>
-              <Text style={[styles.stepDesc, isDark && styles.stepDescDark]}>{item.desc}</Text>
+              <Text style={[styles.stepLabel, isDark && styles.textWhite]}>
+                {item.label}
+              </Text>
+              <Text style={[styles.stepDesc, isDark && styles.stepDescDark]}>
+                {item.desc}
+              </Text>
             </View>
           </View>
         ))}
@@ -245,9 +324,9 @@ const AboutScreen = () => {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <Text style={[styles.footerText, isDark && styles.footerTextDark]}>
+        {/* <Text style={[styles.footerText, isDark && styles.footerTextDark]}>
           Built with ❤️ for the Filipino community
-        </Text>
+        </Text> */}
         <Text style={[styles.footerSub, isDark && styles.footerTextDark]}>
           © 2026 EchoLink. All rights reserved.
         </Text>
@@ -337,10 +416,21 @@ const styles = StyleSheet.create({
   },
   logoWrapDark: {backgroundColor: '#2a2a2a'},
   logo: {width: 56, height: 56, resizeMode: 'contain'},
-  appName: {fontSize: 26, fontWeight: '800', color: '#1a1a1a', letterSpacing: -0.5},
+  appName: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#1a1a1a',
+    letterSpacing: -0.5,
+  },
   tagline: {fontSize: 13, color: '#777', textAlign: 'center'},
   taglineDark: {color: '#888'},
-  badgeRow: {flexDirection: 'row', gap: 8, marginTop: 6, flexWrap: 'wrap', justifyContent: 'center'},
+  badgeRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 6,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
   badge: {
     backgroundColor: '#34C75922',
     paddingHorizontal: 10,

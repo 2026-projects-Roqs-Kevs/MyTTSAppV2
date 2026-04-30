@@ -5,17 +5,25 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  useColorScheme,
-  Switch,
   Linking,
   Modal,
   Alert,
-  TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {useNavigation} from '@react-navigation/native';
 import {useSettings} from '../context/SettingsContext';
-import Slider from '@react-native-community/slider';
+
+const FONT_OPTIONS = [
+  {label: 'Default', value: 'sans-serif'},
+  {label: 'Light', value: 'sans-serif-light'},
+  {label: 'Medium', value: 'sans-serif-medium'},
+  {label: 'Condensed', value: 'sans-serif-condensed'},
+  {label: 'Monospace', value: 'monospace'},
+  {label: 'Serif', value: 'serif'},
+  {label: 'Cursive', value: 'cursive'},
+];
+
+const PREVIEW_TEXT = 'This is a sample text';
 
 const SettingsScreen = () => {
   const {settings, updateSettings, effectiveTheme} = useSettings();
@@ -24,10 +32,12 @@ const SettingsScreen = () => {
 
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
-  const [showTextSizeModal, setShowTextSizeModal] = useState(false);
+  const [showFontModal, setShowFontModal] = useState(false);
 
   const handleSendFeedback = () => {
-    Linking.openURL('mailto:echolink.email@gmail.com?subject=EchoLinK Feedback');
+    Linking.openURL(
+      'mailto:echolink.email@gmail.com?subject=EchoLinK Feedback',
+    );
   };
 
   const handleOpenLicenses = () => {
@@ -38,6 +48,9 @@ const SettingsScreen = () => {
     );
   };
 
+  const currentFontLabel =
+    FONT_OPTIONS.find(f => f.value === settings.fontFamily)?.label ?? 'Default';
+
   return (
     <ScrollView style={[styles.container, isDarkMode && styles.containerDark]}>
       {/* Display Section */}
@@ -46,20 +59,31 @@ const SettingsScreen = () => {
           Display
         </Text>
 
+        {/* Font Style */}
         <TouchableOpacity
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
-          onPress={() => setShowTextSizeModal(true)}>
+          onPress={() => setShowFontModal(true)}>
           <View style={styles.settingLeft}>
             <Text
               style={[
                 styles.settingLabel,
                 isDarkMode && styles.settingLabelDark,
               ]}>
-              Text Size
+              Font Style
+            </Text>
+            <Text
+              style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
+              {currentFontLabel}
             </Text>
           </View>
+          <Icon
+            name="chevron-forward"
+            size={18}
+            color={isDarkMode ? '#666' : '#bbb'}
+          />
         </TouchableOpacity>
 
+        {/* Theme */}
         <TouchableOpacity
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
           onPress={() => setShowThemeModal(true)}>
@@ -104,12 +128,13 @@ const SettingsScreen = () => {
               Start listening when app opens
             </Text>
           </View>
-          <Switch
-            value={settings.autoStartRecording}
-            onValueChange={value => updateSettings({autoStartRecording: value})}
-            trackColor={{false: '#767577', true: '#34C759'}}
+          <Icon
+            name="chevron-forward"
+            size={18}
+            color={isDarkMode ? '#666' : '#bbb'}
           />
         </View>
+
         <View
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}>
           <View style={styles.settingLeft}>
@@ -125,12 +150,8 @@ const SettingsScreen = () => {
               Turn off for multi-speaker transcription
             </Text>
           </View>
-          <Switch
-            value={settings.singleSpeakerMode}
-            onValueChange={value => updateSettings({singleSpeakerMode: value})}
-            trackColor={{false: '#767577', true: '#34C759'}}
-          />
         </View>
+
         <TouchableOpacity
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
           onPress={() => setShowLanguageModal(true)}>
@@ -148,28 +169,22 @@ const SettingsScreen = () => {
             </Text>
           </View>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
           onPress={() => navigation.navigate('WordList' as never)}>
           <View style={styles.settingLeft}>
-            <View>
-              <View>
-                <Text
-                  style={[
-                    styles.settingLabel,
-                    isDarkMode && styles.settingLabelDark,
-                  ]}>
-                  Word List
-                </Text>
-                <Text
-                  style={[
-                    styles.settingSubtext,
-                    isDarkMode && styles.subtextDark,
-                  ]}>
-                  Manage Taglish correction words
-                </Text>
-              </View>
-            </View>
+            <Text
+              style={[
+                styles.settingLabel,
+                isDarkMode && styles.settingLabelDark,
+              ]}>
+              Word List
+            </Text>
+            <Text
+              style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
+              Manage Taglish correction words
+            </Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -196,11 +211,6 @@ const SettingsScreen = () => {
               least 10 minutes
             </Text>
           </View>
-          <Switch
-            value={settings.vibrateOnSpeech}
-            onValueChange={value => updateSettings({vibrateOnSpeech: value})}
-            trackColor={{false: '#767577', true: '#34C759'}}
-          />
         </View>
 
         <View
@@ -214,11 +224,6 @@ const SettingsScreen = () => {
               Noise Reduction
             </Text>
           </View>
-          <Switch
-            value={settings.noiseReduction}
-            onValueChange={value => updateSettings({noiseReduction: value})}
-            trackColor={{false: '#767577', true: '#34C759'}}
-          />
         </View>
       </View>
 
@@ -257,7 +262,7 @@ const SettingsScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* ── About Section ── ADDED AT BOTTOM ────────────────────────────────── */}
+      {/* About Section */}
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
           About
@@ -287,11 +292,10 @@ const SettingsScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Bottom spacer */}
       <View style={{height: 32}} />
 
-      {/* Text Size Modal */}
-      <Modal visible={showTextSizeModal} transparent animationType="fade">
+      {/* ── Font Style Modal ── */}
+      <Modal visible={showFontModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View
             style={[
@@ -299,62 +303,63 @@ const SettingsScreen = () => {
               isDarkMode && styles.modalContentDark,
             ]}>
             <Text style={[styles.modalTitle, isDarkMode && styles.textDark]}>
-              Text Size
+              Font Style
             </Text>
 
-            <Text
-              style={[
-                styles.previewText,
-                isDarkMode && styles.textDark,
-                {fontSize: settings.textSize},
-              ]}>
-              This is sample text
-            </Text>
+            <ScrollView
+              style={{maxHeight: 420}}
+              showsVerticalScrollIndicator={false}>
+              {FONT_OPTIONS.map(font => {
+                const isSelected = settings.fontFamily === font.value;
+                return (
+                  <TouchableOpacity
+                    key={font.value}
+                    style={[
+                      styles.fontOption,
+                      isDarkMode && styles.fontOptionDark,
+                      isSelected && styles.fontOptionSelected,
+                    ]}
+                    onPress={() => {
+                      updateSettings({fontFamily: font.value});
+                      setShowFontModal(false);
+                    }}>
+                    {/* Label row */}
+                    <View style={styles.fontOptionHeader}>
+                      <Text
+                        style={[
+                          styles.fontOptionLabel,
+                          isDarkMode && styles.textDark,
+                        ]}>
+                        {font.label}
+                      </Text>
+                      {isSelected && (
+                        <Icon name="checkmark" size={18} color="#007AFF" />
+                      )}
+                    </View>
+                    {/* Preview */}
+                    <Text
+                      style={[
+                        styles.fontOptionPreview,
+                        {fontFamily: font.value},
+                        isDarkMode && styles.subtextDark,
+                      ]}>
+                      {PREVIEW_TEXT}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
 
-            <View style={styles.buttonGroup}>
-              <TouchableOpacity
-                style={[styles.sizeBtn]}
-                onPress={() =>
-                  updateSettings({
-                    textSize: Math.max(12, settings.textSize - 1),
-                  })
-                }>
-                <Icon name="remove" size={24} color="#007AFF" />
-              </TouchableOpacity>
-
-              <Text style={[styles.sizeDisplay, isDarkMode && styles.textDark]}>
-                {settings.textSize}
-              </Text>
-
-              <TouchableOpacity
-                style={[styles.sizeBtn]}
-                onPress={() =>
-                  updateSettings({
-                    textSize: Math.min(24, settings.textSize + 1),
-                  })
-                }>
-                <Icon name="add" size={24} color="#007AFF" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalBtn, styles.resetBtn]}
-                onPress={() => updateSettings({textSize: 16})}>
-                <Text style={styles.resetBtnText}>Reset</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.modalBtn, styles.doneBtn]}
-                onPress={() => setShowTextSizeModal(false)}>
-                <Text style={styles.doneBtnText}>Done</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={styles.closeBtn}
+              onPress={() => setShowFontModal(false)}>
+              <Text style={styles.closeBtnText}>Close</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      {/* Theme Modal */}
+      {/* ── Theme Modal ── */}
       <Modal visible={showThemeModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View
@@ -365,8 +370,7 @@ const SettingsScreen = () => {
             <Text style={[styles.modalTitle, isDarkMode && styles.textDark]}>
               Theme
             </Text>
-
-            {['light', 'system', 'dark'].map(theme => (
+            {(['light', 'system', 'dark'] as const).map(theme => (
               <TouchableOpacity
                 key={theme}
                 style={[
@@ -374,7 +378,7 @@ const SettingsScreen = () => {
                   settings.theme === theme && styles.optionItemSelected,
                 ]}
                 onPress={() => {
-                  updateSettings({theme: theme as 'light' | 'system' | 'dark'});
+                  updateSettings({theme});
                   setShowThemeModal(false);
                 }}>
                 <Text
@@ -390,28 +394,16 @@ const SettingsScreen = () => {
                 )}
               </TouchableOpacity>
             ))}
-
             <TouchableOpacity
-              style={{
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#c5b9b9',
-                padding: 10,
-                marginVertical: 10,
-                borderRadius: 5,
-              }}
+              style={styles.closeBtn}
               onPress={() => setShowThemeModal(false)}>
-              <View>
-                <Text style={{color: '#3a3737', fontWeight: 'bold'}}>
-                  Close
-                </Text>
-              </View>
+              <Text style={styles.closeBtnText}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      {/* Language Modal */}
+      {/* ── Language Modal ── */}
       <Modal visible={showLanguageModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View
@@ -422,11 +414,12 @@ const SettingsScreen = () => {
             <Text style={[styles.modalTitle, isDarkMode && styles.textDark]}>
               Language
             </Text>
-
-            {[
-              {key: 'en', label: 'English 🇺🇸'},
-              {key: 'tl', label: 'Tagalog 🇵🇭'},
-            ].map(lang => (
+            {(
+              [
+                {key: 'en', label: 'English 🇺🇸'},
+                {key: 'tl', label: 'Tagalog 🇵🇭'},
+              ] as const
+            ).map(lang => (
               <TouchableOpacity
                 key={lang.key}
                 style={[
@@ -434,7 +427,7 @@ const SettingsScreen = () => {
                   settings.language === lang.key && styles.optionItemSelected,
                 ]}
                 onPress={() => {
-                  updateSettings({language: lang.key as 'en' | 'tl'});
+                  updateSettings({language: lang.key});
                   setShowLanguageModal(false);
                 }}>
                 <Text
@@ -446,22 +439,10 @@ const SettingsScreen = () => {
                 )}
               </TouchableOpacity>
             ))}
-
             <TouchableOpacity
-              style={{
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#c5b9b9',
-                padding: 10,
-                marginVertical: 10,
-                borderRadius: 5,
-              }}
+              style={styles.closeBtn}
               onPress={() => setShowLanguageModal(false)}>
-              <View>
-                <Text style={{color: '#3a3737', fontWeight: 'bold'}}>
-                  Close
-                </Text>
-              </View>
+              <Text style={styles.closeBtnText}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -471,16 +452,9 @@ const SettingsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  containerDark: {
-    backgroundColor: '#4F4F4F',
-  },
-  section: {
-    marginTop: 20,
-  },
+  container: {flex: 1, backgroundColor: '#f5f5f5'},
+  containerDark: {backgroundColor: '#4F4F4F'},
+  section: {marginTop: 20},
   sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
@@ -489,9 +463,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textTransform: 'uppercase',
   },
-  textDark: {
-    color: '#3FD8A3',
-  },
+  textDark: {color: '#3FD8A3'},
+  subtextDark: {color: '#c1b8b8'},
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -499,30 +472,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     padding: 16,
   },
-  settingItemDark: {
-    backgroundColor: 'transparent',
-  },
-  settingLeft: {
-    flex: 1,
-  },
-  settingIcon: {
-    marginRight: 12,
-  },
-  settingLabel: {
-    fontSize: 16,
-    color: '#333',
-  },
-  settingLabelDark: {
-    color: '#e0dcdc',
-  },
-  settingSubtext: {
-    fontSize: 14,
-    color: '#777575',
-    marginTop: 2,
-  },
-  subtextDark: {
-    color: '#c1b8b8',
-  },
+  settingItemDark: {backgroundColor: 'transparent'},
+  settingLeft: {flex: 1},
+  settingLabel: {fontSize: 16, color: '#333'},
+  settingLabelDark: {color: '#e0dcdc'},
+  settingSubtext: {fontSize: 14, color: '#777575', marginTop: 2},
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -534,67 +488,35 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 20,
   },
-  modalContentDark: {
-    backgroundColor: '#2a2a2a',
-  },
+  modalContentDark: {backgroundColor: '#2a2a2a'},
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 16,
     color: '#333',
   },
-  previewText: {
-    textAlign: 'center',
-    marginVertical: 20,
-    color: '#333',
+
+  // Font option card
+  fontOption: {
+    backgroundColor: '#f7f7f7',
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
   },
-  sliderContainer: {
+  fontOptionDark: {backgroundColor: '#1a1a1a'},
+  fontOptionSelected: {borderColor: '#007AFF'},
+  fontOptionHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 6,
   },
-  sliderLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
-  slider: {
-    flex: 1,
-    marginHorizontal: 10,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  modalBtn: {
-    flex: 1,
-    padding: 20,
-    marginVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  resetBtn: {
-    backgroundColor: '#f5f5f5',
-  },
-  resetBtnText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  doneBtn: {
-    backgroundColor: '#007AFF',
-  },
-  doneBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  cancelBtn: {
-    backgroundColor: '#ff2222',
-  },
-  cancelBtnText: {
-    color: '#353030',
-    fontSize: 16,
-  },
+  fontOptionLabel: {fontSize: 13, fontWeight: '700', color: '#333'},
+  fontOptionPreview: {fontSize: 15, color: '#555'},
+
+  // Shared option item (theme/language)
   optionItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -603,60 +525,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  optionItemSelected: {
-    backgroundColor: '#5a677288',
-  },
-  optionText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  inputContainer: {
-    flexDirection: 'row',
+  optionItemSelected: {backgroundColor: '#5a677288'},
+  optionText: {fontSize: 16, color: '#333'},
+
+  // Close button
+  closeBtn: {
     alignItems: 'center',
-    marginBottom: 20,
-    gap: 12,
-  },
-  inputLabel: {
-    fontSize: 16,
-    color: '#333',
-  },
-  textInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
+    justifyContent: 'center',
+    backgroundColor: '#c5b9b9',
+    padding: 12,
+    marginTop: 12,
     borderRadius: 8,
-    padding: 10,
-    fontSize: 16,
-    width: 60,
-    textAlign: 'center',
-    color: '#333',
   },
-  textInputDark: {
-    borderColor: '#666',
-    color: '#fff',
-    backgroundColor: '#1a1a1a',
-  },
-  buttonGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 30,
-    marginBottom: 20,
-  },
-  sizeBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sizeDisplay: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#333',
-    minWidth: 60,
-    textAlign: 'center',
-  },
+  closeBtnText: {color: '#3a3737', fontWeight: 'bold', fontSize: 15},
 });
 
 export default SettingsScreen;

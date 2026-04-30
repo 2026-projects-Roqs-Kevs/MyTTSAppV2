@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface AppSettings {
-  textSize: number; // 12-24
+  fontFamily: string;
   theme: 'light' | 'system' | 'dark';
   autoStartRecording: boolean;
   language: 'en' | 'tl';
@@ -13,13 +13,13 @@ export interface AppSettings {
 const SETTINGS_KEY = '@app_settings';
 
 const DEFAULT_SETTINGS: AppSettings = {
-  textSize: 16,
+  fontFamily: 'sans-serif',
   theme: 'system',
   autoStartRecording: false,
   language: 'tl',
   vibrateOnSpeech: false,
   singleSpeakerMode: true,
-  noiseReduction: false, 
+  noiseReduction: false,
 };
 
 class SettingsService {

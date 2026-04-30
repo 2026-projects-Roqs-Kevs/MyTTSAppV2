@@ -50,11 +50,18 @@ interface SessionMetrics {
 // ─── Metric Helpers ──────────────────────────────────────────────────────────
 
 function countWords(text: string): number {
-  return text.trim().split(/\s+/).filter(w => w.length > 0).length;
+  return text
+    .trim()
+    .split(/\s+/)
+    .filter(w => w.length > 0).length;
 }
 
 function estimateAccuracy(text: string): number {
-  const words = text.toLowerCase().trim().split(/\s+/).filter(w => w.length > 0);
+  const words = text
+    .toLowerCase()
+    .trim()
+    .split(/\s+/)
+    .filter(w => w.length > 0);
   if (words.length === 0) return 0;
   const avgLen = words.reduce((s, w) => s + w.length, 0) / words.length;
   const shortRatio = words.filter(w => w.length <= 2).length / words.length;
@@ -65,7 +72,10 @@ function estimateAccuracy(text: string): number {
 }
 
 function wordReliabilityScore(text: string): number {
-  const words = text.trim().split(/\s+/).filter(w => w.length > 0);
+  const words = text
+    .trim()
+    .split(/\s+/)
+    .filter(w => w.length > 0);
   if (words.length === 0) return 0;
   const reliable = words.filter(w => w.length >= 3).length;
   return (reliable / words.length) * 100;
@@ -90,16 +100,22 @@ function computeMetrics(data: {
     totalResults,
   } = data;
 
-  const sessionDurationSec = Math.max((sessionEndMs - sessionStartMs) / 1000, 0.001);
+  const sessionDurationSec = Math.max(
+    (sessionEndMs - sessionStartMs) / 1000,
+    0.001,
+  );
   const totalWords = countWords(transcribedText);
   const estimatedAccuracy = estimateAccuracy(transcribedText);
   const resultsPerSec = totalResults / sessionDurationSec;
   const rtf = resultsPerSec > 0 ? Math.min(1 / resultsPerSec, 5) : 1.0;
-  const processingLatencyMs = firstResultMs !== null ? firstResultMs - sessionStartMs : 0;
+  const processingLatencyMs =
+    firstResultMs !== null ? firstResultMs - sessionStartMs : 0;
   const reliability = wordReliabilityScore(transcribedText);
   const wpm = totalWords / (sessionDurationSec / 60);
-  const vocalClarityIndex = totalPartials > 0 ? (resolvedPartials / totalPartials) * 100 : 100;
-  const wpmScore = wpm > 0 ? Math.min(100, Math.max(0, 100 - Math.abs(wpm - 130) * 0.5)) : 50;
+  const vocalClarityIndex =
+    totalPartials > 0 ? (resolvedPartials / totalPartials) * 100 : 100;
+  const wpmScore =
+    wpm > 0 ? Math.min(100, Math.max(0, 100 - Math.abs(wpm - 130) * 0.5)) : 50;
   const signalQuality = vocalClarityIndex * 0.7 + wpmScore * 0.3;
   const throughputWps = totalWords / sessionDurationSec;
 
@@ -171,20 +187,34 @@ const MetricTile: React.FC<MetricTileProps> = ({
   progress,
   progressInverted = false,
 }) => {
+  const {settings} = useSettings();
   const barColor = progressInverted
-    ? progress > 0.67 ? '#FF3B30' : progress > 0.33 ? '#FF9500' : '#34C759'
+    ? progress > 0.67
+      ? '#FF3B30'
+      : progress > 0.33
+      ? '#FF9500'
+      : '#34C759'
     : color;
 
   return (
     <View style={[metricStyles.tile, isDark && metricStyles.tileDark]}>
       <View style={metricStyles.tileHeader}>
         <Icon name={icon} size={16} color={color} />
-        <Text style={[metricStyles.tileLabel, isDark && metricStyles.subtextDark]}>
+        <Text
+          style={[
+            metricStyles.tileLabel,
+            isDark && metricStyles.subtextDark,
+            {fontFamily: settings.fontFamily},
+          ]}>
           {label}
         </Text>
       </View>
       <Text style={[metricStyles.tileValue, {color}]}>{value}</Text>
-      <View style={[metricStyles.progressBg, {backgroundColor: isDark ? '#444' : '#eee'}]}>
+      <View
+        style={[
+          metricStyles.progressBg,
+          {backgroundColor: isDark ? '#444' : '#eee'},
+        ]}>
         <View
           style={[
             metricStyles.progressFill,
@@ -195,7 +225,14 @@ const MetricTile: React.FC<MetricTileProps> = ({
           ]}
         />
       </View>
-      <Text style={[metricStyles.tileSub, isDark && metricStyles.subtextDark]}>{sub}</Text>
+      <Text
+        style={[
+          metricStyles.tileSub,
+          isDark && metricStyles.subtextDark,
+          {fontFamily: settings.fontFamily},
+        ]}>
+        {sub}
+      </Text>
     </View>
   );
 };
@@ -207,7 +244,9 @@ const STTScreen = () => {
   const [isListening, setIsListening] = useState(false);
   const [transcribedText, setTranscribedText] = useState('');
   const [partialText, setPartialText] = useState('');
-  const [isInitialized, setIsInitialized] = useState(sttService.getIsInitialized());
+  const [isInitialized, setIsInitialized] = useState(
+    sttService.getIsInitialized(),
+  );
   const [isInitializing, setIsInitializing] = useState(false);
   const [topPanelFlex, setTopPanelFlex] = useState(1);
   const [bottomPanelFlex, setBottomPanelFlex] = useState(1);
@@ -224,7 +263,7 @@ const STTScreen = () => {
   const [replyText, setReplyText] = useState('');
   const amplitude = useAmplitude(!hasStartedOnce);
   const [isKeyboard, setKeyboard] = useState(false);
-  const [transcriptFontSize, setTranscriptFontSize] = useState(settings.textSize);
+  const [transcriptFontSize, setTranscriptFontSize] = useState(16);
   const lastTapRef = useRef(0);
 
   // ── Session metric tracking refs ─────────────────────────────────────────
@@ -299,7 +338,8 @@ const STTScreen = () => {
           PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
           {
             title: 'Microphone Permission',
-            message: 'This app needs access to your microphone for speech recognition.',
+            message:
+              'This app needs access to your microphone for speech recognition.',
             buttonNeutral: 'Ask Me Later',
             buttonNegative: 'Cancel',
             buttonPositive: 'OK',
@@ -384,12 +424,16 @@ const STTScreen = () => {
           }
 
           if (singleSpeakerModeRef.current) {
-            const isSameSpeaker = speakerDetectionService.isSameAsReferenceSpeaker();
+            const isSameSpeaker =
+              speakerDetectionService.isSameAsReferenceSpeaker();
             if (isSameSpeaker) {
-              setTranscribedText(prev => (prev ? `${prev}${punct}${correctedText}` : correctedText));
+              setTranscribedText(prev =>
+                prev ? `${prev}${punct}${correctedText}` : correctedText,
+              );
             }
           } else {
-            const detection = speakerDetectionService.detectSpeakerChange(correctedText);
+            const detection =
+              speakerDetectionService.detectSpeakerChange(correctedText);
             const labeledText = `[Person ${detection.speaker}] ${correctedText}`;
             setTranscribedText(prev => {
               if (!prev) return labeledText;
@@ -411,14 +455,23 @@ const STTScreen = () => {
           taglishCorrectionService.trackPartial(text);
           setPartialText(text);
 
-          const suggestedLang = taglishCorrectionService.detectLanguage(text, activeModelRef.current);
-          if (suggestedLang && suggestedLang !== activeModelRef.current && !isSwitchingModelRef.current) {
+          const suggestedLang = taglishCorrectionService.detectLanguage(
+            text,
+            activeModelRef.current,
+          );
+          if (
+            suggestedLang &&
+            suggestedLang !== activeModelRef.current &&
+            !isSwitchingModelRef.current
+          ) {
             isSwitchingModelRef.current = true;
             try {
               await sttService.switchLanguage(suggestedLang);
               activeModelRef.current = suggestedLang;
               taglishCorrectionService.resetLanguageDetection();
-              console.log(`>>> [STTScreen] Switched to model: ${suggestedLang}`);
+              console.log(
+                `>>> [STTScreen] Switched to model: ${suggestedLang}`,
+              );
             } catch (e) {
               console.error('>>> [STTScreen] Failed to switch model:', e);
             } finally {
@@ -440,7 +493,9 @@ const STTScreen = () => {
         async () => {
           console.log('>>> Timeout — restarting recognition...');
           try {
-            try { await Vosk.stop(); } catch (_) {}
+            try {
+              await Vosk.stop();
+            } catch (_) {}
             await new Promise(resolve => setTimeout(resolve, 300));
             if (activeModelRef.current !== 'tl') {
               await sttService.switchLanguage('tl');
@@ -467,7 +522,12 @@ const STTScreen = () => {
     if (settings.autoStartRecording && isInitialized && !isListening) {
       handleStartListening();
     }
-  }, [settings.autoStartRecording, isInitialized, isListening, handleStartListening]);
+  }, [
+    settings.autoStartRecording,
+    isInitialized,
+    isListening,
+    handleStartListening,
+  ]);
 
   const handleStopListening = async () => {
     try {
@@ -497,17 +557,20 @@ const STTScreen = () => {
   const handleKeyboard = () => setKeyboard(prev => !prev);
 
   const handleSaveMetrics = async () => {
-  if (!metrics) {
-    Alert.alert('No Metrics', 'Please analyze the session first.');
-    return;
-  }
+    if (!metrics) {
+      Alert.alert('No Metrics', 'Please analyze the session first.');
+      return;
+    }
 
-  try {
-    // Format the metrics data as text
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-    const fileName = `metrics_report_${timestamp}.txt`;
-    
-    const metricsText = `
+    try {
+      // Format the metrics data as text
+      const timestamp = new Date()
+        .toISOString()
+        .replace(/[:.]/g, '-')
+        .slice(0, -5);
+      const fileName = `metrics_report_${timestamp}.txt`;
+
+      const metricsText = `
 
     SESSION METRICS REPORT                     
     Generated: ${new Date().toLocaleString()}                          
@@ -528,31 +591,32 @@ ACCURACY & QUALITY
 PERFORMANCE METRICS
   Words Per Minute:      ${metrics.wpm.toFixed(0)} (${wpmLabel(metrics.wpm)})
   Real-Time Factor:      ${metrics.rtf.toFixed(2)}x
-  First Result Latency:  ${metrics.processingLatencyMs > 0 ? `${metrics.processingLatencyMs}ms` : 'N/A'}
+  First Result Latency:  ${
+    metrics.processingLatencyMs > 0 ? `${metrics.processingLatencyMs}ms` : 'N/A'
+  }
   Throughput:            ${metrics.throughputWps.toFixed(2)} words/sec
 
     `.trim();
 
-    // Determine the file path based on platform
-    const path = Platform.OS === 'android' 
-      ? `${RNFS.DownloadDirectoryPath}/${fileName}`
-      : `${RNFS.DocumentDirectoryPath}/${fileName}`;
+      // Determine the file path based on platform
+      const path =
+        Platform.OS === 'android'
+          ? `${RNFS.DownloadDirectoryPath}/${fileName}`
+          : `${RNFS.DocumentDirectoryPath}/${fileName}`;
 
-    // Write the file
-    await RNFS.writeFile(path, metricsText, 'utf8');
-    
-    Alert.alert(
-      'Success', 
-      `Metrics saved successfully!\n\nFile: ${fileName}`,
-      [
-        { text: 'OK' },
-      ]
-    );
-  } catch (error) {
-    console.error('Error saving metrics:', error);
-    Alert.alert('Error', 'Failed to save metrics file. Please try again.');
-  }
-};
+      // Write the file
+      await RNFS.writeFile(path, metricsText, 'utf8');
+
+      Alert.alert(
+        'Success',
+        `Metrics saved successfully!\n\nFile: ${fileName}`,
+        [{text: 'OK'}],
+      );
+    } catch (error) {
+      console.error('Error saving metrics:', error);
+      Alert.alert('Error', 'Failed to save metrics file. Please try again.');
+    }
+  };
 
   // ── Analyze button handler ───────────────────────────────────────────────
   const handleAnalyze = () => {
@@ -578,15 +642,16 @@ PERFORMANCE METRICS
       const now = Date.now();
       const delta = now - lastTapRef.current;
       if (delta < 300) {
-        setTranscriptFontSize(prev =>
-          prev === settings.textSize ? settings.textSize + 4 : settings.textSize,
-        );
+        setTranscriptFontSize(prev => (prev === 16 ? 20 : 16));
       }
       lastTapRef.current = now;
     }
   };
 
-  const pinchRef = useRef({initialDistance: 1, initialFontSize: transcriptFontSize});
+  const pinchRef = useRef({
+    initialDistance: 1,
+    initialFontSize: transcriptFontSize,
+  });
   const transcriptFontSizeRef = useRef(transcriptFontSize);
 
   useEffect(() => {
@@ -597,8 +662,10 @@ PERFORMANCE METRICS
   const panResponderSecond = React.useMemo(
     () =>
       PanResponder.create({
-        onStartShouldSetPanResponder: evt => evt.nativeEvent.touches.length === 2,
-        onMoveShouldSetPanResponder: evt => evt.nativeEvent.touches.length === 2,
+        onStartShouldSetPanResponder: evt =>
+          evt.nativeEvent.touches.length === 2,
+        onMoveShouldSetPanResponder: evt =>
+          evt.nativeEvent.touches.length === 2,
         onPanResponderGrant: evt => {
           const touches = evt.nativeEvent.touches;
           if (touches.length === 2) {
@@ -617,7 +684,10 @@ PERFORMANCE METRICS
             if (!currentDistance) return;
             const scale = currentDistance / pinchRef.current.initialDistance;
             const dampedScale = 1 + (scale - 1) * 0.3;
-            const newSize = Math.max(10, Math.min(32, pinchRef.current.initialFontSize * dampedScale));
+            const newSize = Math.max(
+              10,
+              Math.min(32, pinchRef.current.initialFontSize * dampedScale),
+            );
             setTranscriptFontSize(Math.round(newSize));
           }
         },
@@ -641,7 +711,12 @@ PERFORMANCE METRICS
             style={styles.micButton}>
             <Icon name="mic" size={72} color="#34C759" />
           </TouchableOpacity>
-          <Text style={[styles.idleText, isDarkMode && styles.textDark]}>
+          <Text
+            style={[
+              styles.idleText,
+              isDarkMode && styles.textDark,
+              {fontFamily: settings.fontFamily},
+            ]}>
             {isInitializing ? 'Initializing...' : 'Ready to transcribe'}
           </Text>
           <WaveformView
@@ -654,7 +729,11 @@ PERFORMANCE METRICS
           <TouchableOpacity
             style={styles.idleSettingsIcon}
             onPress={() => navigation.navigate('Settings' as never)}>
-            <Icon name="settings-outline" size={28} color={isDarkMode ? '#fff' : '#333'} />
+            <Icon
+              name="settings-outline"
+              size={28}
+              color={isDarkMode ? '#fff' : '#333'}
+            />
           </TouchableOpacity>
         </View>
       )}
@@ -673,30 +752,49 @@ PERFORMANCE METRICS
                 source={require('../../assets/bglogo.png')}
                 style={{width: 40, height: 40, resizeMode: 'contain'}}
               />
-              <Text style={[styles.headerTitleStyle, isDarkMode && styles.headerTitleDark]}>
+              <Text
+                style={[
+                  styles.headerTitleStyle,
+                  isDarkMode && styles.headerTitleDark,
+                ]}>
                 EchoLink
               </Text>
             </View>
             <TouchableOpacity
               style={styles.settingsIcon}
               onPress={() => navigation.navigate('Settings' as never)}>
-              <Icon name="settings-outline" size={28} color={isDarkMode ? '#fff' : '#333'} />
+              <Icon
+                name="settings-outline"
+                size={28}
+                color={isDarkMode ? '#fff' : '#333'}
+              />
             </TouchableOpacity>
           </View>
 
           {/* TOP PANEL */}
           <View style={{flex: isKeyboard ? topPanelFlex : 1}}>
             <ScrollView
-              style={[styles.textContainer, isDarkMode && styles.textContainerDark]}
+              style={[
+                styles.textContainer,
+                isDarkMode && styles.textContainerDark,
+              ]}
               contentContainerStyle={styles.textContent}>
               <View style={{position: 'relative'}}>
-                <View style={{position: 'absolute', right: 1, top: 10, zIndex: 10}}>
+                <View
+                  style={{position: 'absolute', right: 1, top: 10, zIndex: 10}}>
                   {!isListening && transcribedText ? (
-                    <View style={{flexDirection: 'row', alignItems: 'center', gap: 3}}>
-                      <TouchableOpacity style={styles.smallActionBtn} onPress={handleCopy}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 3,
+                      }}>
+                      {/* <TouchableOpacity style={styles.smallActionBtn} onPress={handleCopy}>
                         <Icon name="copy-outline" size={18} color="#007AFF" />
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.smallActionBtn} onPress={handleClear}>
+                      </TouchableOpacity> */}
+                      <TouchableOpacity
+                        style={styles.smallActionBtn}
+                        onPress={handleClear}>
                         <Icon name="trash-outline" size={18} color="#FF3B30" />
                       </TouchableOpacity>
                     </View>
@@ -706,19 +804,30 @@ PERFORMANCE METRICS
                   style={[
                     styles.partialText,
                     isDarkMode && styles.partialTextDark,
-                    {fontSize: settings.textSize - 2},
+                    {fontSize: 14, fontFamily: settings.fontFamily},
                   ]}>
-                  {partialText || (isListening ? 'Listening...' : 'Listening...')}
+                  {partialText ||
+                    (isListening ? 'Listening...' : 'Listening...')}
                 </Text>
               </View>
 
-              <View {...panResponderSecond.panHandlers} onTouchEnd={handleViewTouch} style={{flex: 1}}>
+              <View
+                {...panResponderSecond.panHandlers}
+                onTouchEnd={handleViewTouch}
+                style={{flex: 1}}>
                 <TextInput
                   pointerEvents="none"
                   style={[
                     styles.transcribedInput,
                     isDarkMode && styles.transcribedInputDark,
-                    {fontSize: transcriptFontSize, flex: 1, borderColor: '#ffffff00', padding: 0, marginTop: 20},
+                    {
+                      fontSize: transcriptFontSize,
+                      flex: 1,
+                      borderColor: '#ffffff00',
+                      padding: 0,
+                      marginTop: 20,
+                      fontFamily: settings.fontFamily,
+                    },
                   ]}
                   multiline
                   value={transcribedText}
@@ -740,7 +849,13 @@ PERFORMANCE METRICS
                 borderTopColor: isDarkMode ? '#707271' : '#afb3b1',
                 borderTopWidth: 2,
               }}>
-              <View style={{position: 'absolute', top: -8, right: '35%', zIndex: 10}}>
+              <View
+                style={{
+                  position: 'absolute',
+                  top: -8,
+                  right: '35%',
+                  zIndex: 10,
+                }}>
                 <View {...panResponder.panHandlers} style={styles.divider}>
                   <View
                     style={{
@@ -752,8 +867,11 @@ PERFORMANCE METRICS
                   />
                 </View>
               </View>
-              <View style={{position: 'absolute', top: 10, right: 10, zIndex: 10}}>
-                <TouchableOpacity style={styles.smallActionBtn} onPress={handleClearReply}>
+              <View
+                style={{position: 'absolute', top: 10, right: 10, zIndex: 10}}>
+                <TouchableOpacity
+                  style={styles.smallActionBtn}
+                  onPress={handleClearReply}>
                   <Icon name="trash-outline" size={24} color="#FF3B30" />
                 </TouchableOpacity>
               </View>
@@ -761,7 +879,7 @@ PERFORMANCE METRICS
                 style={[
                   styles.transcribedInput,
                   isDarkMode && styles.transcribedInputDark,
-                  {fontSize: settings.textSize, flex: 1},
+                  {fontSize: 16, flex: 1, fontFamily: settings.fontFamily},
                 ]}
                 multiline
                 value={replyText}
@@ -773,10 +891,20 @@ PERFORMANCE METRICS
           )}
 
           {/* ACTION BUTTONS */}
-          <View style={[styles.actionButtonsRow, isDarkMode && styles.actionButtonsRowDark]}>
+          <View
+            style={[
+              styles.actionButtonsRow,
+              isDarkMode && styles.actionButtonsRowDark,
+            ]}>
             <View style={{flexDirection: 'row', alignItems: 'center'}}>
-              <TouchableOpacity style={styles.smallActionBtn} onPress={handleKeyboard}>
-                <Text style={[{color: '#2c2b2b'}, isDarkMode && {color: '#f5f5f5'}]}>
+              <TouchableOpacity
+                style={styles.smallActionBtn}
+                onPress={handleKeyboard}>
+                <Text
+                  style={[
+                    {color: '#2c2b2b'},
+                    isDarkMode && {color: '#f5f5f5'},
+                  ]}>
                   {isKeyboard ? (
                     <Icon name="caret-down-circle" size={24} />
                   ) : (
@@ -790,7 +918,13 @@ PERFORMANCE METRICS
                 style={[styles.toggleButton, {backgroundColor: '#007AFF'}]}
                 onPress={handleAnalyze}>
                 <Icon name="stats-chart-outline" size={20} color="#FFF" />
-                <Text style={styles.toggleButtonText}>Analyze</Text>
+                <Text
+                  style={[
+                    styles.toggleButtonText,
+                    {fontFamily: settings.fontFamily},
+                  ]}>
+                  Analyze
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
@@ -798,15 +932,25 @@ PERFORMANCE METRICS
                   isListening ? styles.stopButton : styles.startButton,
                   isInitializing && styles.buttonDisabled,
                 ]}
-                onPress={isListening ? handleStopListening : handleStartListening}
+                onPress={
+                  isListening ? handleStopListening : handleStartListening
+                }
                 disabled={isInitializing}>
                 <Icon
                   name={isListening ? 'stop-circle-outline' : 'mic-outline'}
                   size={22}
                   color="#fff"
                 />
-                <Text style={styles.toggleButtonText}>
-                  {isInitializing ? 'Initializing...' : isListening ? 'Stop' : 'Start'}
+                <Text
+                  style={[
+                    styles.toggleButtonText,
+                    {fontFamily: settings.fontFamily},
+                  ]}>
+                  {isInitializing
+                    ? 'Initializing...'
+                    : isListening
+                    ? 'Stop'
+                    : 'Start'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -820,25 +964,40 @@ PERFORMANCE METRICS
               {/* Header row */}
               <View style={metricStyles.cardHeader}>
                 <View style={{flex: 1}}>
-                  <Text style={[metricStyles.cardTitle, isDarkMode && metricStyles.textDark]}>
+                  <Text
+                    style={[
+                      metricStyles.cardTitle,
+                      isDarkMode && metricStyles.textDark,
+                      {fontFamily: settings.fontFamily},
+                    ]}>
                     Session Report
                   </Text>
-                  <Text style={[metricStyles.cardMeta, isDarkMode && metricStyles.subtextDark]}>
-                    {metrics.totalWords} words · {metrics.sessionDurationSec.toFixed(1)}s
+                  <Text
+                    style={[
+                      metricStyles.cardMeta,
+                      isDarkMode && metricStyles.subtextDark,
+                      {fontFamily: settings.fontFamily},
+                    ]}>
+                    {metrics.totalWords} words ·{' '}
+                    {metrics.sessionDurationSec.toFixed(1)}s
                   </Text>
                 </View>
-                
+
                 {/* Add Save Button here */}
                 <TouchableOpacity
                   onPress={handleSaveMetrics}
                   style={[metricStyles.saveBtn, {marginRight: 8}]}>
                   <Icon name="save-outline" size={20} color="#34C759" />
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
                   onPress={() => setShowMetrics(false)}
                   style={metricStyles.closeBtn}>
-                  <Icon name="close-circle-outline" size={22} color={isDarkMode ? '#888' : '#999'} />
+                  <Icon
+                    name="close-circle-outline"
+                    size={22}
+                    color={isDarkMode ? '#888' : '#999'}
+                  />
                 </TouchableOpacity>
               </View>
 
@@ -872,7 +1031,12 @@ PERFORMANCE METRICS
                   label="Words / Min"
                   value={metrics.wpm.toFixed(0)}
                   sub={wpmLabel(metrics.wpm)}
-                  color={scoreColor(Math.min(100, Math.max(0, 100 - Math.abs(metrics.wpm - 130))))}
+                  color={scoreColor(
+                    Math.min(
+                      100,
+                      Math.max(0, 100 - Math.abs(metrics.wpm - 130)),
+                    ),
+                  )}
                   progress={Math.min(metrics.wpm / 200, 1)}
                 />
                 <MetricTile
@@ -893,7 +1057,11 @@ PERFORMANCE METRICS
                   icon="timer-outline"
                   label="Real-Time Factor"
                   value={`${metrics.rtf.toFixed(2)}x`}
-                  sub={metrics.rtf <= 1 ? 'faster than real-time' : 'slower than real-time'}
+                  sub={
+                    metrics.rtf <= 1
+                      ? 'faster than real-time'
+                      : 'slower than real-time'
+                  }
                   color={rtfColor(metrics.rtf)}
                   progress={Math.min(metrics.rtf / 3, 1)}
                   progressInverted
@@ -902,7 +1070,11 @@ PERFORMANCE METRICS
                   isDark={isDarkMode}
                   icon="flash-outline"
                   label="1st Result Latency"
-                  value={metrics.processingLatencyMs > 0 ? `${metrics.processingLatencyMs}ms` : 'N/A'}
+                  value={
+                    metrics.processingLatencyMs > 0
+                      ? `${metrics.processingLatencyMs}ms`
+                      : 'N/A'
+                  }
                   sub="time to first result"
                   color={latencyColor(metrics.processingLatencyMs)}
                   progress={Math.min(metrics.processingLatencyMs / 2000, 1)}
@@ -938,8 +1110,14 @@ PERFORMANCE METRICS
                 />
               </View>
 
-              <Text style={[metricStyles.legend, isDarkMode && metricStyles.subtextDark]}>
-                * Metrics estimated from session data — no reference text required
+              <Text
+                style={[
+                  metricStyles.legend,
+                  isDarkMode && metricStyles.subtextDark,
+                  {fontFamily: settings.fontFamily},
+                ]}>
+                * Metrics estimated from session data — no reference text
+                required
               </Text>
             </ScrollView>
           )}
@@ -1051,14 +1229,43 @@ const metricStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#f5f5f5'},
-  topActionRow: {flexDirection: 'row', justifyContent: 'flex-end', gap: 12, paddingHorizontal: 12, paddingVertical: 6},
-  bottomActionRow: {flexDirection: 'row', justifyContent: 'flex-end', gap: 12, paddingHorizontal: 12, paddingVertical: 6},
-  smallActionBtn: {flexDirection: 'row', alignItems: 'center', gap: 4, padding: 6},
+  topActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  bottomActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  smallActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    padding: 6,
+  },
   smallActionText: {fontSize: 14, fontWeight: '600', color: '#007AFF'},
-  flexRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 5},
+  flexRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 5,
+  },
   containerDark: {backgroundColor: '#1a1a1a'},
   headerDark: {backgroundColor: '#535B58'},
-  headerStyle: {flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fcf7f7', paddingHorizontal: 2, paddingVertical: 5},
+  headerStyle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#fcf7f7',
+    paddingHorizontal: 2,
+    paddingVertical: 5,
+  },
   headerTitleStyle: {color: '#000', fontSize: 18},
   headerTitleDark: {color: '#ffffff'},
   buttonDisabled: {opacity: 0.5, backgroundColor: '#999'},
@@ -1068,42 +1275,115 @@ const styles = StyleSheet.create({
   buttonContent: {flexDirection: 'row', alignItems: 'center', gap: 8},
   title: {fontSize: 16, fontWeight: 'bold', marginBottom: 20, color: '#333'},
   textDark: {color: '#fff'},
-  statusContainer: {flexDirection: 'row', alignItems: 'center', marginBottom: 20},
-  statusIndicator: {width: 12, height: 12, borderRadius: 6, backgroundColor: '#999', marginRight: 8},
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  statusIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#999',
+    marginRight: 8,
+  },
   statusIndicatorActive: {backgroundColor: '#FF3B30'},
   statusText: {fontSize: 16, color: '#827e7e'},
   textContainer: {flex: 1, backgroundColor: '#fff'},
   textContainerDark: {backgroundColor: '#2a2a2a'},
   textContent: {padding: 16},
   transcribedText: {fontSize: 16, lineHeight: 24, color: '#333'},
-  partialText: {fontSize: 16, lineHeight: 24, color: '#999', fontStyle: 'italic', marginTop: 8},
+  partialText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#999',
+    fontStyle: 'italic',
+    marginTop: 8,
+  },
   partialTextDark: {color: '#827e7e'},
   buttonContainer: {gap: 12},
   button: {padding: 16, borderRadius: 12, alignItems: 'center'},
   startButton: {backgroundColor: '#34C759'},
   stopButton: {backgroundColor: '#FF3B30'},
-  clearButton: {backgroundColor: 'transparent', borderWidth: 1, borderColor: '#007AFF'},
+  clearButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
   buttonText: {color: '#fff', fontSize: 18, fontWeight: '600'},
   clearButtonText: {color: '#007AFF', fontSize: 16, fontWeight: '600'},
-  languageButton: {backgroundColor: '#fff', padding: 12, borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: '#007AFF', alignItems: 'center'},
+  languageButton: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    alignItems: 'center',
+  },
   languageButtonDark: {backgroundColor: '#2a2a2a', borderColor: '#007AFF'},
   languageButtonText: {color: '#007AFF', fontSize: 16, fontWeight: '600'},
-  actionButtonsRow: {flexDirection: 'row', alignContent: 'center', justifyContent: 'space-between', paddingVertical: 2, paddingHorizontal: 4, backgroundColor: '#edfffb'},
+  actionButtonsRow: {
+    flexDirection: 'row',
+    alignContent: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+    backgroundColor: '#edfffb',
+  },
   actionButtonsRowDark: {backgroundColor: '#536D67'},
-  actionButton: {flex: 1, backgroundColor: 'transparent', borderWidth: 1, padding: 12},
+  actionButton: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    padding: 12,
+  },
   copyButton: {borderColor: '#007AFF'},
   actionButtonText: {fontSize: 16, fontWeight: '600', color: '#007AFF'},
-  idleContainer: {flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16},
+  idleContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
   idleText: {fontSize: 18, color: '#333', fontWeight: '500'},
   idleSettingsIcon: {position: 'absolute', bottom: 20, left: 20, padding: 8},
   micButton: {padding: 2},
   activeContainer: {flex: 1},
-  statusLabel: {fontSize: 22, fontWeight: '700', color: '#333', marginBottom: 8},
-  divider: {alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'transparent', flexDirection: 'row'},
-  bottomPanelHeader: {flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 4},
-  toggleButton: {flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 8},
+  statusLabel: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 8,
+  },
+  divider: {
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'transparent',
+    flexDirection: 'row',
+  },
+  bottomPanelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 4,
+  },
+  toggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
   toggleButtonText: {color: '#fff', fontWeight: '600', fontSize: 15},
-  transcribedInput: {flex: 1, backgroundColor: '#fff', padding: 16, fontSize: 16, color: '#333', textAlignVertical: 'top'},
+  transcribedInput: {
+    flex: 1,
+    backgroundColor: '#fff',
+    padding: 16,
+    fontSize: 16,
+    color: '#333',
+    textAlignVertical: 'top',
+  },
   transcribedInputDark: {backgroundColor: '#2a2a2a', color: '#fff'},
 });
 

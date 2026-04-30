@@ -1,4 +1,5 @@
 import React, {useState, useEffect} from 'react';
+import {Text} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import STTScreen from './src/screens/STTScreen';
@@ -14,6 +15,19 @@ import WordListScreen from './src/screens/WordListScreen';
 import AboutScreen from './src/screens/AboutScreen';
 
 const Stack = createNativeStackNavigator();
+
+const GlobalFontWrapper = ({children}: {children: React.ReactNode}) => {
+  const {settings} = useSettings();
+
+  useEffect(() => {
+    if (Text.defaultProps == null) {
+      Text.defaultProps = {};
+    }
+    Text.defaultProps.style = {fontFamily: settings.fontFamily};
+  }, [settings.fontFamily]);
+
+  return <>{children}</>;
+};
 
 const AppNavigator = () => {
   const {effectiveTheme} = useSettings();
@@ -94,7 +108,9 @@ function App() {
 
   return (
     <SettingsProvider>
-      {!isReady ? <WelcomeScreen /> : <AppNavigator />}
+      <GlobalFontWrapper>
+        {!isReady ? <WelcomeScreen /> : <AppNavigator />}
+      </GlobalFontWrapper>
     </SettingsProvider>
   );
 }
