@@ -102,6 +102,7 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
   isDark,
   delay,
 }) => {
+  const {settings} = useSettings();
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(18)).current;
 
@@ -129,9 +130,9 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
           <Icon name={icon} size={26} color={color} />
         </View>
         <View style={{flex: 1, gap: 4}}>
-          <Text style={[cardStyles.cardTitle, {color}]}>{title}</Text>
+          <Text style={[cardStyles.cardTitle, {color, fontFamily: settings.fontFamily}]}>{title}</Text>
           <Text
-            style={[cardStyles.cardDesc, isDark && cardStyles.cardDescDark]}>
+            style={[cardStyles.cardDesc, isDark && cardStyles.cardDescDark, {fontFamily: settings.fontFamily}]}>
             {description}
           </Text>
         </View>
@@ -144,7 +145,7 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
 
 const AboutScreen = () => {
   const navigation = useNavigation();
-  const {effectiveTheme} = useSettings();
+  const {effectiveTheme, settings} = useSettings();
   const isDark = effectiveTheme === 'dark';
 
   const heroOpacity = useRef(new Animated.Value(0)).current;
@@ -180,7 +181,7 @@ const AboutScreen = () => {
             color={isDark ? '#fff' : '#333'}
           />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, isDark && styles.textWhite]}>
+        <Text style={[styles.headerTitle, isDark && styles.textWhite, {fontFamily: settings.fontFamily}]}>
           About
         </Text>
         <View style={{width: 36}} />
@@ -198,23 +199,23 @@ const AboutScreen = () => {
             style={styles.logo}
           />
         </View>
-        <Text style={[styles.appName, isDark && styles.textWhite]}>
+        <Text style={[styles.appName, isDark && styles.textWhite, {fontFamily: settings.fontFamily}]}>
           EchoLink
         </Text>
-        <Text style={[styles.tagline, isDark && styles.taglineDark]}>
+        <Text style={[styles.tagline, isDark && styles.taglineDark, {fontFamily: settings.fontFamily}]}>
           Offline · Multilingual · Real-Time Transcription
         </Text>
         <View style={styles.badgeRow}>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>v1.0.0</Text>
+            <Text style={[styles.badgeText, {fontFamily: settings.fontFamily}]}>v1.0.0</Text>
           </View>
           <View style={[styles.badge, {backgroundColor: '#007AFF22'}]}>
-            <Text style={[styles.badgeText, {color: '#007AFF'}]}>
+            <Text style={[styles.badgeText, {color: '#007AFF', fontFamily: settings.fontFamily}]}>
               React Native
             </Text>
           </View>
           <View style={[styles.badge, {backgroundColor: '#FF950022'}]}>
-            <Text style={[styles.badgeText, {color: '#FF9500'}]}>
+            <Text style={[styles.badgeText, {color: '#FF9500', fontFamily: settings.fontFamily}]}>
               Tagalog + English
             </Text>
           </View>
@@ -223,7 +224,7 @@ const AboutScreen = () => {
 
       {/* Description */}
       <View style={[styles.descCard, isDark && styles.descCardDark]}>
-        <Text style={[styles.descText, isDark && styles.descTextDark]}>
+        <Text style={[styles.descText, isDark && styles.descTextDark, {fontFamily: settings.fontFamily}]}>
           EchoLink is a fully offline, real-time speech-to-text application
           designed for Filipino users. It supports seamless Taglish (Tagalog +
           English) transcription, dynamic speaker detection, and session
@@ -232,7 +233,7 @@ const AboutScreen = () => {
       </View>
 
       {/* Modules Section */}
-      <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>
+      <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark, {fontFamily: settings.fontFamily}]}>
         Modules & Technologies
       </Text>
 
@@ -245,7 +246,7 @@ const AboutScreen = () => {
         style={[
           styles.sectionTitle,
           isDark && styles.sectionTitleDark,
-          {marginTop: 28},
+          {marginTop: 28, fontFamily: settings.fontFamily},
         ]}>
         Tech Stack
       </Text>
@@ -254,11 +255,11 @@ const AboutScreen = () => {
           <View
             key={item.label}
             style={[styles.stackItem, isDark && styles.stackItemDark]}>
-            <Text style={[styles.stackLabel, isDark && styles.textWhite]}>
+            <Text style={[styles.stackLabel, isDark && styles.textWhite, {fontFamily: settings.fontFamily}]}>
               {item.label}
             </Text>
             <Text
-              style={[styles.stackVersion, isDark && styles.stackVersionDark]}>
+              style={[styles.stackVersion, isDark && styles.stackVersionDark, {fontFamily: settings.fontFamily}]}>
               {item.version}
             </Text>
           </View>
@@ -270,12 +271,12 @@ const AboutScreen = () => {
         style={[
           styles.sectionTitle,
           isDark && styles.sectionTitleDark,
-          {marginTop: 28},
+          {marginTop: 28, fontFamily: settings.fontFamily},
         ]}>
         How Speech Recognition Works
       </Text>
       <View style={[styles.deepDive, isDark && styles.deepDiveDark]}>
-        <Text style={[styles.deepDiveTitle, isDark && styles.textWhite]}>
+        <Text style={[styles.deepDiveTitle, isDark && styles.textWhite, {fontFamily: settings.fontFamily}]}>
           Audio → Features → HMM → Viterbi → Words
         </Text>
 
@@ -308,13 +309,13 @@ const AboutScreen = () => {
         ].map(item => (
           <View key={item.step} style={styles.stepRow}>
             <View style={styles.stepBadge}>
-              <Text style={styles.stepNum}>{item.step}</Text>
+              <Text style={[styles.stepNum, {fontFamily: settings.fontFamily}]}>{item.step}</Text>
             </View>
             <View style={{flex: 1, gap: 2}}>
-              <Text style={[styles.stepLabel, isDark && styles.textWhite]}>
+              <Text style={[styles.stepLabel, isDark && styles.textWhite, {fontFamily: settings.fontFamily}]}>
                 {item.label}
               </Text>
-              <Text style={[styles.stepDesc, isDark && styles.stepDescDark]}>
+              <Text style={[styles.stepDesc, isDark && styles.stepDescDark, {fontFamily: settings.fontFamily}]}>
                 {item.desc}
               </Text>
             </View>
@@ -327,7 +328,7 @@ const AboutScreen = () => {
         {/* <Text style={[styles.footerText, isDark && styles.footerTextDark]}>
           Built with ❤️ for the Filipino community
         </Text> */}
-        <Text style={[styles.footerSub, isDark && styles.footerTextDark]}>
+        <Text style={[styles.footerSub, isDark && styles.footerTextDark, {fontFamily: settings.fontFamily}]}>
           © 2026 EchoLink. All rights reserved.
         </Text>
       </View>

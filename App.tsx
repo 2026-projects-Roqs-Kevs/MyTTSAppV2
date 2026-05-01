@@ -30,7 +30,7 @@ const GlobalFontWrapper = ({children}: {children: React.ReactNode}) => {
 };
 
 const AppNavigator = () => {
-  const {effectiveTheme} = useSettings();
+  const {effectiveTheme, settings} = useSettings();
   const isDarkMode = effectiveTheme === 'dark';
 
   return (
@@ -55,6 +55,7 @@ const AppNavigator = () => {
               backgroundColor: isDarkMode ? '#535B58' : '#ffffff',
             },
             headerTintColor: isDarkMode ? '#ffffff' : '#000000',
+            headerTitleStyle: {fontFamily: settings.fontFamily}, // 👈 add this
           }}
         />
         <Stack.Screen

@@ -8,19 +8,20 @@ import {
   Linking,
   Modal,
   Alert,
+  Switch,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {useNavigation} from '@react-navigation/native';
 import {useSettings} from '../context/SettingsContext';
 
 const FONT_OPTIONS = [
-  {label: 'Default', value: 'sans-serif'},
-  {label: 'Light', value: 'sans-serif-light'},
-  {label: 'Medium', value: 'sans-serif-medium'},
+  {label: 'Default',   value: 'sans-serif'},
+  {label: 'Light',     value: 'sans-serif-light'},
+  {label: 'Medium',    value: 'sans-serif-medium'},
   {label: 'Condensed', value: 'sans-serif-condensed'},
   {label: 'Monospace', value: 'monospace'},
-  {label: 'Serif', value: 'serif'},
-  {label: 'Cursive', value: 'cursive'},
+  {label: 'Serif',     value: 'serif'},
+  {label: 'Cursive',   value: 'cursive'},
 ];
 
 const PREVIEW_TEXT = 'This is a sample text';
@@ -29,15 +30,14 @@ const SettingsScreen = () => {
   const {settings, updateSettings, effectiveTheme} = useSettings();
   const isDarkMode = effectiveTheme === 'dark';
   const navigation = useNavigation();
+  const ff = {fontFamily: settings.fontFamily}; // shorthand for convenience
 
-  const [showThemeModal, setShowThemeModal] = useState(false);
+  const [showThemeModal,    setShowThemeModal]    = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
-  const [showFontModal, setShowFontModal] = useState(false);
+  const [showFontModal,     setShowFontModal]     = useState(false);
 
   const handleSendFeedback = () => {
-    Linking.openURL(
-      'mailto:echolink.email@gmail.com?subject=EchoLinK Feedback',
-    );
+    Linking.openURL('mailto:echolink.email@gmail.com?subject=EchoLinK Feedback');
   };
 
   const handleOpenLicenses = () => {
@@ -53,55 +53,36 @@ const SettingsScreen = () => {
 
   return (
     <ScrollView style={[styles.container, isDarkMode && styles.containerDark]}>
+
       {/* Display Section */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
+        <Text style={[styles.sectionTitle, isDarkMode && styles.textDark, ff]}>
           Display
         </Text>
 
-        {/* Font Style */}
         <TouchableOpacity
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
           onPress={() => setShowFontModal(true)}>
           <View style={styles.settingLeft}>
-            <Text
-              style={[
-                styles.settingLabel,
-                isDarkMode && styles.settingLabelDark,
-              ]}>
+            <Text style={[styles.settingLabel, isDarkMode && styles.settingLabelDark, ff]}>
               Font Style
             </Text>
-            <Text
-              style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
+            <Text style={[styles.settingSubtext, isDarkMode && styles.subtextDark, ff]}>
               {currentFontLabel}
             </Text>
           </View>
-          <Icon
-            name="chevron-forward"
-            size={18}
-            color={isDarkMode ? '#666' : '#bbb'}
-          />
+          <Icon name="chevron-forward" size={18} color={isDarkMode ? '#666' : '#bbb'} />
         </TouchableOpacity>
 
-        {/* Theme */}
         <TouchableOpacity
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
           onPress={() => setShowThemeModal(true)}>
           <View style={styles.settingLeft}>
-            <Text
-              style={[
-                styles.settingLabel,
-                isDarkMode && styles.settingLabelDark,
-              ]}>
+            <Text style={[styles.settingLabel, isDarkMode && styles.settingLabelDark, ff]}>
               Theme
             </Text>
-            <Text
-              style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
-              {settings.theme === 'light'
-                ? 'Light'
-                : settings.theme === 'dark'
-                ? 'Dark'
-                : 'System'}
+            <Text style={[styles.settingSubtext, isDarkMode && styles.subtextDark, ff]}>
+              {settings.theme === 'light' ? 'Light' : settings.theme === 'dark' ? 'Dark' : 'System'}
             </Text>
           </View>
         </TouchableOpacity>
@@ -109,62 +90,50 @@ const SettingsScreen = () => {
 
       {/* Audio & Language Section */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
+        <Text style={[styles.sectionTitle, isDarkMode && styles.textDark, ff]}>
           Audio & Language
         </Text>
 
-        <View
-          style={[styles.settingItem, isDarkMode && styles.settingItemDark]}>
-          <View style={styles.settingLeft}>
-            <Text
-              style={[
-                styles.settingLabel,
-                isDarkMode && styles.settingLabelDark,
-              ]}>
-              Auto-start Recording
-            </Text>
-            <Text
-              style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
-              Start listening when app opens
-            </Text>
-          </View>
-          <Icon
-            name="chevron-forward"
-            size={18}
-            color={isDarkMode ? '#666' : '#bbb'}
-          />
+      <View style={[styles.settingItem, isDarkMode && styles.settingItemDark]}>
+        <View style={styles.settingLeft}>
+          <Text style={[styles.settingLabel, isDarkMode && styles.settingLabelDark, ff]}>
+            Auto-start Recording
+          </Text>
+          <Text style={[styles.settingSubtext, isDarkMode && styles.subtextDark, ff]}>
+            Start listening when app opens
+          </Text>
         </View>
+        <Switch
+          value={settings.autoStartRecording}
+          onValueChange={value => updateSettings({autoStartRecording: value})}
+          trackColor={{false: '#767577', true: '#34C759'}}
+        />
+      </View>
 
-        <View
-          style={[styles.settingItem, isDarkMode && styles.settingItemDark]}>
-          <View style={styles.settingLeft}>
-            <Text
-              style={[
-                styles.settingLabel,
-                isDarkMode && styles.settingLabelDark,
-              ]}>
-              Detect only one speaker
-            </Text>
-            <Text
-              style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
-              Turn off for multi-speaker transcription
-            </Text>
-          </View>
+      <View style={[styles.settingItem, isDarkMode && styles.settingItemDark]}>
+        <View style={styles.settingLeft}>
+          <Text style={[styles.settingLabel, isDarkMode && styles.settingLabelDark, ff]}>
+            Detect only one speaker
+          </Text>
+          <Text style={[styles.settingSubtext, isDarkMode && styles.subtextDark, ff]}>
+            Turn off for multi-speaker transcription
+          </Text>
         </View>
+        <Switch
+          value={settings.singleSpeakerMode}
+          onValueChange={value => updateSettings({singleSpeakerMode: value})}
+          trackColor={{false: '#767577', true: '#34C759'}}
+        />
+      </View>
 
         <TouchableOpacity
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
           onPress={() => setShowLanguageModal(true)}>
           <View style={styles.settingLeft}>
-            <Text
-              style={[
-                styles.settingLabel,
-                isDarkMode && styles.settingLabelDark,
-              ]}>
+            <Text style={[styles.settingLabel, isDarkMode && styles.settingLabelDark, ff]}>
               Language
             </Text>
-            <Text
-              style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
+            <Text style={[styles.settingSubtext, isDarkMode && styles.subtextDark, ff]}>
               {settings.language === 'en' ? 'English' : 'Tagalog'}
             </Text>
           </View>
@@ -174,15 +143,10 @@ const SettingsScreen = () => {
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
           onPress={() => navigation.navigate('WordList' as never)}>
           <View style={styles.settingLeft}>
-            <Text
-              style={[
-                styles.settingLabel,
-                isDarkMode && styles.settingLabelDark,
-              ]}>
+            <Text style={[styles.settingLabel, isDarkMode && styles.settingLabelDark, ff]}>
               Word List
             </Text>
-            <Text
-              style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
+            <Text style={[styles.settingSubtext, isDarkMode && styles.subtextDark, ff]}>
               Manage Taglish correction words
             </Text>
           </View>
@@ -191,45 +155,43 @@ const SettingsScreen = () => {
 
       {/* Events Section */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
+        <Text style={[styles.sectionTitle, isDarkMode && styles.textDark, ff]}>
           Events
         </Text>
 
-        <View
-          style={[styles.settingItem, isDarkMode && styles.settingItemDark]}>
+        <View style={[styles.settingItem, isDarkMode && styles.settingItemDark]}>
           <View style={styles.settingLeft}>
-            <Text
-              style={[
-                styles.settingLabel,
-                isDarkMode && styles.settingLabelDark,
-              ]}>
+            <Text style={[styles.settingLabel, isDarkMode && styles.settingLabelDark, ff]}>
               Vibrate on speech
             </Text>
-            <Text
-              style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
-              Phone vibrate when someone starts speaking after the pause of at
-              least 10 minutes
+            <Text style={[styles.settingSubtext, isDarkMode && styles.subtextDark, ff]}>
+              Phone vibrate when someone starts speaking after the pause of at least 10 minutes
             </Text>
           </View>
+          <Switch
+            value={settings.vibrateOnSpeech}
+            onValueChange={value => updateSettings({vibrateOnSpeech: value})}
+            trackColor={{false: '#767577', true: '#34C759'}}
+          />
         </View>
 
-        <View
-          style={[styles.settingItem, isDarkMode && styles.settingItemDark]}>
+        <View style={[styles.settingItem, isDarkMode && styles.settingItemDark]}>
           <View style={styles.settingLeft}>
-            <Text
-              style={[
-                styles.settingLabel,
-                isDarkMode && styles.settingLabelDark,
-              ]}>
+            <Text style={[styles.settingLabel, isDarkMode && styles.settingLabelDark, ff]}>
               Noise Reduction
             </Text>
           </View>
+          <Switch
+            value={settings.noiseReduction}
+            onValueChange={value => updateSettings({noiseReduction: value})}
+            trackColor={{false: '#767577', true: '#34C759'}}
+          />
         </View>
       </View>
 
       {/* Support Section */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
+        <Text style={[styles.sectionTitle, isDarkMode && styles.textDark, ff]}>
           Support
         </Text>
 
@@ -237,11 +199,7 @@ const SettingsScreen = () => {
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
           onPress={handleSendFeedback}>
           <View style={styles.settingLeft}>
-            <Text
-              style={[
-                styles.settingLabel,
-                isDarkMode && styles.settingLabelDark,
-              ]}>
+            <Text style={[styles.settingLabel, isDarkMode && styles.settingLabelDark, ff]}>
               Send Feedback
             </Text>
           </View>
@@ -251,11 +209,7 @@ const SettingsScreen = () => {
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
           onPress={handleOpenLicenses}>
           <View style={styles.settingLeft}>
-            <Text
-              style={[
-                styles.settingLabel,
-                isDarkMode && styles.settingLabelDark,
-              ]}>
+            <Text style={[styles.settingLabel, isDarkMode && styles.settingLabelDark, ff]}>
               Open Source Licenses
             </Text>
           </View>
@@ -264,7 +218,7 @@ const SettingsScreen = () => {
 
       {/* About Section */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
+        <Text style={[styles.sectionTitle, isDarkMode && styles.textDark, ff]}>
           About
         </Text>
 
@@ -272,23 +226,14 @@ const SettingsScreen = () => {
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}
           onPress={() => navigation.navigate('About' as never)}>
           <View style={styles.settingLeft}>
-            <Text
-              style={[
-                styles.settingLabel,
-                isDarkMode && styles.settingLabelDark,
-              ]}>
+            <Text style={[styles.settingLabel, isDarkMode && styles.settingLabelDark, ff]}>
               About EchoLink
             </Text>
-            <Text
-              style={[styles.settingSubtext, isDarkMode && styles.subtextDark]}>
+            <Text style={[styles.settingSubtext, isDarkMode && styles.subtextDark, ff]}>
               Version, modules & how it works
             </Text>
           </View>
-          <Icon
-            name="chevron-forward"
-            size={18}
-            color={isDarkMode ? '#666' : '#bbb'}
-          />
+          <Icon name="chevron-forward" size={18} color={isDarkMode ? '#666' : '#bbb'} />
         </TouchableOpacity>
       </View>
 
@@ -297,18 +242,11 @@ const SettingsScreen = () => {
       {/* ── Font Style Modal ── */}
       <Modal visible={showFontModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalContent,
-              isDarkMode && styles.modalContentDark,
-            ]}>
-            <Text style={[styles.modalTitle, isDarkMode && styles.textDark]}>
+          <View style={[styles.modalContent, isDarkMode && styles.modalContentDark]}>
+            <Text style={[styles.modalTitle, isDarkMode && styles.textDark, ff]}>
               Font Style
             </Text>
-
-            <ScrollView
-              style={{maxHeight: 420}}
-              showsVerticalScrollIndicator={false}>
+            <ScrollView style={{maxHeight: 420}} showsVerticalScrollIndicator={false}>
               {FONT_OPTIONS.map(font => {
                 const isSelected = settings.fontFamily === font.value;
                 return (
@@ -323,37 +261,22 @@ const SettingsScreen = () => {
                       updateSettings({fontFamily: font.value});
                       setShowFontModal(false);
                     }}>
-                    {/* Label row */}
                     <View style={styles.fontOptionHeader}>
-                      <Text
-                        style={[
-                          styles.fontOptionLabel,
-                          isDarkMode && styles.textDark,
-                        ]}>
+                      <Text style={[styles.fontOptionLabel, isDarkMode && styles.textDark, ff]}>
                         {font.label}
                       </Text>
-                      {isSelected && (
-                        <Icon name="checkmark" size={18} color="#007AFF" />
-                      )}
+                      {isSelected && <Icon name="checkmark" size={18} color="#007AFF" />}
                     </View>
-                    {/* Preview */}
-                    <Text
-                      style={[
-                        styles.fontOptionPreview,
-                        {fontFamily: font.value},
-                        isDarkMode && styles.subtextDark,
-                      ]}>
+                    {/* Preview renders in its OWN font, not ff */}
+                    <Text style={[styles.fontOptionPreview, {fontFamily: font.value}, isDarkMode && styles.subtextDark]}>
                       {PREVIEW_TEXT}
                     </Text>
                   </TouchableOpacity>
                 );
               })}
             </ScrollView>
-
-            <TouchableOpacity
-              style={styles.closeBtn}
-              onPress={() => setShowFontModal(false)}>
-              <Text style={styles.closeBtnText}>Close</Text>
+            <TouchableOpacity style={styles.closeBtn} onPress={() => setShowFontModal(false)}>
+              <Text style={[styles.closeBtnText, ff]}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -362,42 +285,23 @@ const SettingsScreen = () => {
       {/* ── Theme Modal ── */}
       <Modal visible={showThemeModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalContent,
-              isDarkMode && styles.modalContentDark,
-            ]}>
-            <Text style={[styles.modalTitle, isDarkMode && styles.textDark]}>
+          <View style={[styles.modalContent, isDarkMode && styles.modalContentDark]}>
+            <Text style={[styles.modalTitle, isDarkMode && styles.textDark, ff]}>
               Theme
             </Text>
             {(['light', 'system', 'dark'] as const).map(theme => (
               <TouchableOpacity
                 key={theme}
-                style={[
-                  styles.optionItem,
-                  settings.theme === theme && styles.optionItemSelected,
-                ]}
-                onPress={() => {
-                  updateSettings({theme});
-                  setShowThemeModal(false);
-                }}>
-                <Text
-                  style={[styles.optionText, isDarkMode && styles.textDark]}>
-                  {theme === 'light'
-                    ? 'Light'
-                    : theme === 'dark'
-                    ? 'Dark'
-                    : 'System'}
+                style={[styles.optionItem, settings.theme === theme && styles.optionItemSelected]}
+                onPress={() => { updateSettings({theme}); setShowThemeModal(false); }}>
+                <Text style={[styles.optionText, isDarkMode && styles.textDark, ff]}>
+                  {theme === 'light' ? 'Light' : theme === 'dark' ? 'Dark' : 'System'}
                 </Text>
-                {settings.theme === theme && (
-                  <Icon name="checkmark" size={24} color="#007AFF" />
-                )}
+                {settings.theme === theme && <Icon name="checkmark" size={24} color="#007AFF" />}
               </TouchableOpacity>
             ))}
-            <TouchableOpacity
-              style={styles.closeBtn}
-              onPress={() => setShowThemeModal(false)}>
-              <Text style={styles.closeBtnText}>Close</Text>
+            <TouchableOpacity style={styles.closeBtn} onPress={() => setShowThemeModal(false)}>
+              <Text style={[styles.closeBtnText, ff]}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -406,47 +310,28 @@ const SettingsScreen = () => {
       {/* ── Language Modal ── */}
       <Modal visible={showLanguageModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalContent,
-              isDarkMode && styles.modalContentDark,
-            ]}>
-            <Text style={[styles.modalTitle, isDarkMode && styles.textDark]}>
+          <View style={[styles.modalContent, isDarkMode && styles.modalContentDark]}>
+            <Text style={[styles.modalTitle, isDarkMode && styles.textDark, ff]}>
               Language
             </Text>
-            {(
-              [
-                {key: 'en', label: 'English 🇺🇸'},
-                {key: 'tl', label: 'Tagalog 🇵🇭'},
-              ] as const
-            ).map(lang => (
+            {([{key: 'en', label: 'English 🇺🇸'}, {key: 'tl', label: 'Tagalog 🇵🇭'}] as const).map(lang => (
               <TouchableOpacity
                 key={lang.key}
-                style={[
-                  styles.optionItem,
-                  settings.language === lang.key && styles.optionItemSelected,
-                ]}
-                onPress={() => {
-                  updateSettings({language: lang.key});
-                  setShowLanguageModal(false);
-                }}>
-                <Text
-                  style={[styles.optionText, isDarkMode && styles.textDark]}>
+                style={[styles.optionItem, settings.language === lang.key && styles.optionItemSelected]}
+                onPress={() => { updateSettings({language: lang.key}); setShowLanguageModal(false); }}>
+                <Text style={[styles.optionText, isDarkMode && styles.textDark, ff]}>
                   {lang.label}
                 </Text>
-                {settings.language === lang.key && (
-                  <Icon name="checkmark" size={24} color="#007AFF" />
-                )}
+                {settings.language === lang.key && <Icon name="checkmark" size={24} color="#007AFF" />}
               </TouchableOpacity>
             ))}
-            <TouchableOpacity
-              style={styles.closeBtn}
-              onPress={() => setShowLanguageModal(false)}>
-              <Text style={styles.closeBtnText}>Close</Text>
+            <TouchableOpacity style={styles.closeBtn} onPress={() => setShowLanguageModal(false)}>
+              <Text style={[styles.closeBtnText, ff]}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
+
     </ScrollView>
   );
 };

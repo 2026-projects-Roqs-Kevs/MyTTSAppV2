@@ -19,13 +19,15 @@ const CustomWordRow = React.memo(
     item,
     isDarkMode,
     onRemove,
+    fontFamily,
   }: {
     item: string;
     isDarkMode: boolean;
     onRemove: (word: string) => void;
+    fontFamily: string;
   }) => (
     <View style={[styles.wordRow, isDarkMode && styles.wordRowDark]}>
-      <Text style={[styles.wordText, isDarkMode && styles.textDark]}>
+      <Text style={[styles.wordText, isDarkMode && styles.textDark, {fontFamily}]}>
         {item}
       </Text>
       <TouchableOpacity onPress={() => onRemove(item)} style={styles.removeBtn}>
@@ -36,21 +38,22 @@ const CustomWordRow = React.memo(
 );
 
 const BaseWordRow = React.memo(
-  ({item, isDarkMode}: {item: string; isDarkMode: boolean}) => (
+  ({item, isDarkMode, fontFamily}: {item: string; isDarkMode: boolean; fontFamily: string}) => (
     <View style={[styles.wordRow, isDarkMode && styles.wordRowDark]}>
-      <Text style={[styles.wordText, isDarkMode && styles.textDark]}>
+      <Text style={[styles.wordText, isDarkMode && styles.textDark, {fontFamily}]}>
         {item}
       </Text>
       <View style={styles.baseBadge}>
-        <Text style={styles.baseBadgeText}>built-in</Text>
+        <Text style={[styles.baseBadgeText, {fontFamily}]}>built-in</Text>
       </View>
     </View>
   ),
 );
 
 const WordListScreen = () => {
-  const {effectiveTheme} = useSettings();
+  const {effectiveTheme, settings} = useSettings(); // 👈 add settings
   const isDarkMode = effectiveTheme === 'dark';
+  const ff = {fontFamily: settings.fontFamily}; // 👈 shorthand
 
   const [customWords, setCustomWords] = useState<string[]>([]);
   const [baseWords, setBaseWords] = useState<string[]>([]);
@@ -72,10 +75,7 @@ const WordListScreen = () => {
     if (!word) return;
 
     if (taglishCorrectionService.isInBaseDictionary(word)) {
-      Alert.alert(
-        'Already exists',
-        `"${word}" is already in the base dictionary.`,
-      );
+      Alert.alert('Already exists', `"${word}" is already in the base dictionary.`);
       setNewWord('');
       return;
     }
@@ -129,26 +129,32 @@ const WordListScreen = () => {
         item={item}
         isDarkMode={isDarkMode}
         onRemove={handleRemoveWord}
+        fontFamily={settings.fontFamily} // 👈 pass font
       />
     ),
-    [isDarkMode, handleRemoveWord],
+    [isDarkMode, handleRemoveWord, settings.fontFamily],
   );
 
   const renderBaseWord = useCallback(
     ({item}: {item: string}) => (
-      <BaseWordRow item={item} isDarkMode={isDarkMode} />
+      <BaseWordRow
+        item={item}
+        isDarkMode={isDarkMode}
+        fontFamily={settings.fontFamily} // 👈 pass font
+      />
     ),
-    [isDarkMode],
+    [isDarkMode, settings.fontFamily],
   );
 
   return (
     <KeyboardAvoidingView
       style={[styles.container, isDarkMode && styles.containerDark]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+
       {/* Add word input */}
       <View style={[styles.addRow, isDarkMode && styles.addRowDark]}>
         <TextInput
-          style={[styles.input, isDarkMode && styles.inputDark]}
+          style={[styles.input, isDarkMode && styles.inputDark, ff]}
           value={newWord}
           onChangeText={setNewWord}
           placeholder="Add new English word..."
@@ -175,7 +181,7 @@ const WordListScreen = () => {
           style={styles.searchIcon}
         />
         <TextInput
-          style={[styles.searchInput, isDarkMode && styles.textDark]}
+          style={[styles.searchInput, isDarkMode && styles.textDark, ff]}
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholder="Search words..."
@@ -185,11 +191,7 @@ const WordListScreen = () => {
         />
         {searchQuery ? (
           <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Icon
-              name="close-circle"
-              size={16}
-              color={isDarkMode ? '#666' : '#999'}
-            />
+            <Icon name="close-circle" size={16} color={isDarkMode ? '#666' : '#999'} />
           </TouchableOpacity>
         ) : null}
       </View>
@@ -199,24 +201,14 @@ const WordListScreen = () => {
         <TouchableOpacity
           style={[styles.tab, activeTab === 'custom' && styles.tabActive]}
           onPress={() => setActiveTab('custom')}>
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'custom' && styles.tabTextActive,
-              isDarkMode && styles.textDark,
-            ]}>
+          <Text style={[styles.tabText, activeTab === 'custom' && styles.tabTextActive, isDarkMode && styles.textDark, ff]}>
             My Words ({filteredCustomWords.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'base' && styles.tabActive]}
           onPress={() => setActiveTab('base')}>
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'base' && styles.tabTextActive,
-              isDarkMode && styles.textDark,
-            ]}>
+          <Text style={[styles.tabText, activeTab === 'base' && styles.tabTextActive, isDarkMode && styles.textDark, ff]}>
             Built-in ({filteredBaseWords.length})
           </Text>
         </TouchableOpacity>
@@ -226,12 +218,8 @@ const WordListScreen = () => {
       {activeTab === 'custom' ? (
         filteredCustomWords.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Icon
-              name="book-outline"
-              size={48}
-              color={isDarkMode ? '#444' : '#ddd'}
-            />
-            <Text style={[styles.emptyText, isDarkMode && styles.subtextDark]}>
+            <Icon name="book-outline" size={48} color={isDarkMode ? '#444' : '#ddd'} />
+            <Text style={[styles.emptyText, isDarkMode && styles.subtextDark, ff]}>
               {searchQuery
                 ? 'No words match your search'
                 : 'No custom words yet.\nAdd English words above to improve\nTaglish transcription accuracy.'}
@@ -244,11 +232,7 @@ const WordListScreen = () => {
             renderItem={renderCustomWord}
             style={styles.list}
             keyboardShouldPersistTaps="handled"
-            getItemLayout={(_data, index) => ({
-              length: 56, // approximate height of each wordRow
-              offset: 56 * index,
-              index,
-            })}
+            getItemLayout={(_data, index) => ({length: 56, offset: 56 * index, index})}
           />
         )
       ) : (
@@ -258,11 +242,7 @@ const WordListScreen = () => {
           renderItem={renderBaseWord}
           style={styles.list}
           keyboardShouldPersistTaps="handled"
-          getItemLayout={(_data, index) => ({
-            length: 56, // approximate height of each wordRow
-            offset: 56 * index,
-            index,
-          })}
+          getItemLayout={(_data, index) => ({length: 56, offset: 56 * index, index})}
         />
       )}
     </KeyboardAvoidingView>

@@ -756,6 +756,7 @@ PERFORMANCE METRICS
                 style={[
                   styles.headerTitleStyle,
                   isDarkMode && styles.headerTitleDark,
+                  {fontFamily: settings.fontFamily}
                 ]}>
                 EchoLink
               </Text>
