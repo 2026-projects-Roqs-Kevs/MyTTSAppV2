@@ -51,15 +51,24 @@ const NEUTRAL_WORDS: Set<string> = new Set([
   'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty',
   'ninety', 'hundred', 'percent',
   'today', 'tomorrow', 'yesterday',
-  'ok', 'okay',
 ]);
+
+// Pre-sorted base dictionary — computed once at module load, never again
+const BASE_DICTIONARY_SORTED: string[] = [
+  ...Array.from(ENGLISH_WORDS),
+  ...Array.from(TAGLISH_LOANWORDS),
+  ...Array.from(NEUTRAL_WORDS),
+].sort();
 
 class TaglishCorrectionService {
   private customWords: Set<string> = new Set();
+  // FIX: serialized write queue — prevents duplicate saves racing each other
+  private savePromise: Promise<void> = Promise.resolve();
+
   private partialHistory: string[][] = [];
   private readonly MAX_HISTORY = 3;
   private readonly CONFIDENCE_MIN = 1;
-  private readonly ENGLISH_SWITCH_THRESHOLD = 0.40; // raised from 0.30
+  private readonly ENGLISH_SWITCH_THRESHOLD = 0.40;
   private readonly REQUIRED_ENGLISH_PARTIALS = 2;
   private consecutiveEnglishPartials: number = 0;
   private consecutiveTalagogPartials: number = 0;
@@ -70,7 +79,8 @@ class TaglishCorrectionService {
       const stored = await AsyncStorage.getItem(CUSTOM_WORDS_KEY);
       if (stored) {
         const arr: string[] = JSON.parse(stored);
-        this.customWords = new Set(arr.map(w => w.toLowerCase()));
+        // FIX: deduplicate on load — guards against any historically bad saves
+        this.customWords = new Set(arr.map(w => w.toLowerCase().trim()).filter(Boolean));
       }
       console.log('TaglishCorrectionService initialized, custom words:', this.customWords.size);
     } catch (error) {
@@ -78,7 +88,6 @@ class TaglishCorrectionService {
     }
   }
 
-  // Called on every onPartialResult
   trackPartial(partialText: string) {
     const words = this.normalizeWords(partialText);
     this.partialHistory.push(words);
@@ -87,7 +96,6 @@ class TaglishCorrectionService {
     }
   }
 
-  // Called on every onResult — returns corrected text
   correct(resultText: string): string {
     const resultWords = resultText.split(' ');
 
@@ -100,7 +108,7 @@ class TaglishCorrectionService {
       if (word !== '<unk>') return word;
 
       const candidate = knownWordsInPartials.find(
-        w => !resultWords.includes(w)
+        w => !resultWords.includes(w),
       );
 
       if (candidate) {
@@ -139,7 +147,6 @@ class TaglishCorrectionService {
       .map(([word]) => word);
   }
 
-  // Used for <unk> correction — all tiers are valid candidates
   private isKnownWord(word: string): boolean {
     return (
       ENGLISH_WORDS.has(word) ||
@@ -149,7 +156,6 @@ class TaglishCorrectionService {
     );
   }
 
-  // Used for language detection — ONLY pure English words count
   private isEnglishWord(word: string): boolean {
     return ENGLISH_WORDS.has(word) || this.customWords.has(word);
   }
@@ -167,29 +173,29 @@ class TaglishCorrectionService {
   async addCustomWord(word: string): Promise<void> {
     const lower = word.toLowerCase().trim();
     if (!lower) return;
+    // FIX: check BEFORE mutating the Set so UI guard and service stay in sync
+    if (this.customWords.has(lower)) return;
     this.customWords.add(lower);
     await this.saveCustomWords();
   }
 
   async removeCustomWord(word: string): Promise<void> {
-    this.customWords.delete(word.toLowerCase().trim());
+    const lower = word.toLowerCase().trim();
+    if (!this.customWords.has(lower)) return;
+    this.customWords.delete(lower);
     await this.saveCustomWords();
   }
 
   getCustomWords(): string[] {
+    // FIX: return a fresh sorted array — callers can safely set state directly
     return Array.from(this.customWords).sort();
   }
 
-  // Updated — combines all three tiers since BASE_DICTIONARY no longer exists
+  // FIX: returns the pre-sorted constant — no re-sorting on every call
   getBaseDictionary(): string[] {
-    return [
-      ...Array.from(ENGLISH_WORDS),
-      ...Array.from(TAGLISH_LOANWORDS),
-      ...Array.from(NEUTRAL_WORDS),
-    ].sort();
+    return BASE_DICTIONARY_SORTED;
   }
 
-  // Updated — checks all three tiers
   isInBaseDictionary(word: string): boolean {
     const lower = word.toLowerCase();
     return (
@@ -199,15 +205,20 @@ class TaglishCorrectionService {
     );
   }
 
-  private async saveCustomWords(): Promise<void> {
-    try {
-      await AsyncStorage.setItem(
-        CUSTOM_WORDS_KEY,
-        JSON.stringify(Array.from(this.customWords)),
-      );
-    } catch (error) {
-      console.error('Failed to save custom words:', error);
-    }
+  // FIX: serialized writes — if add/remove are called rapidly, they queue
+  // instead of racing, so AsyncStorage always gets the latest Set state.
+  private saveCustomWords(): Promise<void> {
+    this.savePromise = this.savePromise.then(async () => {
+      try {
+        await AsyncStorage.setItem(
+          CUSTOM_WORDS_KEY,
+          JSON.stringify(Array.from(this.customWords)),
+        );
+      } catch (error) {
+        console.error('Failed to save custom words:', error);
+      }
+    });
+    return this.savePromise;
   }
 
   detectLanguage(

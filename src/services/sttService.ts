@@ -12,21 +12,14 @@ class STTService {
   private loadedModels: Set<ModelKey> = new Set();
 
   // ── Initialization ───────────────────────────────────────────────────────────
-
-  /**
-   * Load both models into memory at startup.
-   * Primary model starts recognition immediately.
-   * Secondary model sits in memory ready for fast switching.
-   */
   async initialize(primaryModel: ModelKey = 'tl'): Promise<void> {
     try {
       const primaryPath = this.getModelPath(primaryModel);
       const secondaryModel: ModelKey = primaryModel === 'tl' ? 'en' : 'tl';
       const secondaryPath = this.getModelPath(secondaryModel);
 
-      // Load both models in parallel
-await this.loadModelByKey(primaryPath, primaryModel);
-await this.loadModelByKey(secondaryPath, secondaryModel);
+      await this.loadModelByKey(primaryPath, primaryModel);
+      await this.loadModelByKey(secondaryPath, secondaryModel);
 
       this.activeModel = primaryModel;
       this.isInitialized = true;
