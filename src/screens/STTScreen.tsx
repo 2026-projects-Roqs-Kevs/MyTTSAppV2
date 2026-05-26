@@ -394,7 +394,6 @@ const STTScreen = () => {
           }
           totalResultsRef.current += 1;
 
-          // Count the pending partial as resolved
           if (lastPartialRef.current.trim()) {
             resolvedPartialsRef.current += 1;
           }
@@ -756,7 +755,7 @@ PERFORMANCE METRICS
                 style={[
                   styles.headerTitleStyle,
                   isDarkMode && styles.headerTitleDark,
-                  {fontFamily: settings.fontFamily}
+                  {fontFamily: settings.fontFamily},
                 ]}>
                 EchoLink
               </Text>
