@@ -12,24 +12,37 @@ interface SpeakerProfile {
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-const NEW_SPEAKER_THRESHOLD = 0.30;  // 30% pitch difference from all known profiles
-const MAX_PROFILE_SAMPLES   = 10;    // cap rolling average to prevent drift
-const MIN_PITCH_SAMPLES     = 3;     // need at least 3 pitch readings per utterance
-const PITCH_MIN_HZ          = 80;
-const PITCH_MAX_HZ          = 400;
+const MAX_PROFILE_SAMPLES = 10;
+const MIN_PITCH_SAMPLES   = 3;
+const PITCH_MIN_HZ        = 80;
+const PITCH_MAX_HZ        = 400;
 
 class SpeakerDetectionService {
   private profiles: SpeakerProfile[] = [];
   private currentSpeakerId = 1;
-
-  // Pitch buffer — filled between utterances via receivePitch()
   private pitchBuffer: number[] = [];
+
+  // Dynamic threshold — changed by setSensitivity()
+  private threshold = 0.30;
+
+  setSensitivity(
+  preset: 'low' | 'medium' | 'high' | 'custom',
+  customValue?: number,
+  ): void {
+    if (preset === 'low')         this.threshold = 0.45;
+    else if (preset === 'medium') this.threshold = 0.30;
+    else if (preset === 'high')   this.threshold = 0.18;
+    else if (preset === 'custom' && customValue !== undefined) {
+      this.threshold = Math.min(Math.max(customValue, 0.05), 0.60);
+    }
+    console.log(`[Speaker] Threshold set to ${(this.threshold * 100).toFixed(0)}%`);
+  }
 
   // ── Called on every onPitchDetected event ────────────────────────────────
   receivePitch(pitch: number): void {
     if (pitch < PITCH_MIN_HZ || pitch > PITCH_MAX_HZ) return;
     this.pitchBuffer.push(pitch);
-    // Keep rolling window of last 30 readings
+    console.log(`[Pitch] received: ${pitch.toFixed(1)}Hz, buffer size: ${this.pitchBuffer.length}`);
     if (this.pitchBuffer.length > 30) this.pitchBuffer.shift();
   }
 
@@ -69,7 +82,7 @@ class SpeakerDetectionService {
       }
     }
 
-    if (bestDiff <= NEW_SPEAKER_THRESHOLD && bestMatch) {
+    if (bestDiff <= this.threshold && bestMatch) {
       // Known speaker — update their rolling average
       const weight = Math.min(bestMatch.pitchSamples, MAX_PROFILE_SAMPLES);
       bestMatch.pitchMean = (bestMatch.pitchMean * weight + avgPitch) / (weight + 1);
@@ -117,7 +130,7 @@ class SpeakerDetectionService {
     const ref = this.profiles[0];
     const diff = Math.abs(avgPitch - ref.pitchMean) / ref.pitchMean;
 
-    if (diff <= NEW_SPEAKER_THRESHOLD) {
+    if (diff <= this.threshold) {
       const weight = Math.min(ref.pitchSamples, MAX_PROFILE_SAMPLES);
       ref.pitchMean = (ref.pitchMean * weight + avgPitch) / (weight + 1);
       ref.pitchSamples = Math.min(ref.pitchSamples + 1, MAX_PROFILE_SAMPLES);

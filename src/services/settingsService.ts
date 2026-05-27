@@ -8,6 +8,8 @@ export interface AppSettings {
   vibrateOnSpeech: boolean;
   singleSpeakerMode: boolean;
   noiseReduction: boolean;
+  speakerSensitivity: 'low' | 'medium' | 'high' | 'custom';
+  speakerSensitivityCustom: number; // 0.05 – 0.60
 }
 
 const SETTINGS_KEY = '@app_settings';
@@ -20,6 +22,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   vibrateOnSpeech: false,
   singleSpeakerMode: true,
   noiseReduction: false,
+  speakerSensitivity: 'medium',
+  speakerSensitivityCustom: 0.30,
 };
 
 class SettingsService {

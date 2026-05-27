@@ -9,6 +9,7 @@ import {
   Modal,
   Alert,
   Switch,
+  TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {useNavigation} from '@react-navigation/native';
@@ -35,6 +36,10 @@ const SettingsScreen = () => {
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showFontModal, setShowFontModal] = useState(false);
+
+  const [customSensitivityInput, setCustomSensitivityInput] = useState(
+    String(settings.speakerSensitivityCustom ?? 0.30)
+  );
 
   const handleSendFeedback = () => {
     Linking.openURL(
@@ -185,6 +190,123 @@ const SettingsScreen = () => {
             trackColor={{false: '#767577', true: '#34C759'}}
           />
         </View>
+
+        {/* Speaker Sensitivity — only shown when multi-speaker mode is on */}
+        {!settings.singleSpeakerMode && (
+          <View style={[styles.settingItem, isDarkMode && styles.settingItemDark, {flexDirection: 'column', alignItems: 'flex-start', gap: 10}]}>
+            <View>
+              <Text style={[styles.settingLabel, isDarkMode && styles.settingLabelDark, ff]}>
+                Speaker Sensitivity
+              </Text>
+              <Text style={[styles.settingSubtext, isDarkMode && styles.subtextDark, ff]}>
+                How different voices need to be to count as a new speaker
+              </Text>
+            </View>
+
+            {/* Preset buttons */}
+            <View style={{flexDirection: 'row', gap: 8, flexWrap: 'wrap'}}>
+              {([
+                { key: 'low',    label: 'Low',    desc: '45% — very different voices' },
+                { key: 'medium', label: 'Medium', desc: '30% — default' },
+                { key: 'high',   label: 'High',   desc: '18% — similar voices' },
+                { key: 'custom', label: 'Custom', desc: 'Set your own value' },
+              ] as const).map(option => (
+                <TouchableOpacity
+                  key={option.key}
+                  onPress={() => updateSettings({speakerSensitivity: option.key})}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 7,
+                    borderRadius: 8,
+                    backgroundColor:
+                      settings.speakerSensitivity === option.key
+                        ? '#34C759'
+                        : isDarkMode ? '#444' : '#e0e0e0',
+                  }}>
+                  <Text style={{
+                    fontSize: 13,
+                    fontFamily: settings.fontFamily,
+                    fontWeight: settings.speakerSensitivity === option.key ? '700' : '400',
+                    color: settings.speakerSensitivity === option.key
+                      ? '#fff'
+                      : isDarkMode ? '#ccc' : '#444',
+                  }}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Description of selected preset */}
+            {settings.speakerSensitivity !== 'custom' && (
+              <Text style={[styles.settingSubtext, isDarkMode && styles.subtextDark, ff]}>
+                {settings.speakerSensitivity === 'low'
+                  ? '45% difference needed — best for very different voice types (male vs female)'
+                  : settings.speakerSensitivity === 'high'
+                  ? '18% difference needed — detects similar voices, may over-split one speaker'
+                  : '30% difference needed — balanced default for most conversations'}
+              </Text>
+            )}
+
+            {/* Custom value input */}
+            {settings.speakerSensitivity === 'custom' && (
+              <View style={{width: '100%', gap: 6}}>
+                <Text style={[styles.settingSubtext, isDarkMode && styles.subtextDark, ff]}>
+                  Enter a value between 0.05 and 0.60
+                </Text>
+                <Text style={[styles.settingSubtext, isDarkMode && styles.subtextDark, ff, {fontStyle: 'italic'}]}>
+                  Lower = more sensitive (detects similar voices){'\n'}
+                  Higher = less sensitive (only very different voices)
+                </Text>
+                <View style={{flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4}}>
+                  <TextInput
+                    value={customSensitivityInput}
+                    onChangeText={setCustomSensitivityInput}
+                    keyboardType="numeric"
+                    placeholder="0.30"
+                    placeholderTextColor={isDarkMode ? '#666' : '#aaa'}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: isDarkMode ? '#555' : '#ccc',
+                      borderRadius: 8,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      color: isDarkMode ? '#fff' : '#333',
+                      fontFamily: settings.fontFamily,
+                      fontSize: 15,
+                      width: 100,
+                      backgroundColor: isDarkMode ? '#333' : '#f9f9f9',
+                    }}
+                  />
+                  <TouchableOpacity
+                    onPress={() => {
+                      const parsed = parseFloat(customSensitivityInput);
+                      if (!isNaN(parsed) && parsed >= 0.05 && parsed <= 0.60) {
+                        updateSettings({speakerSensitivityCustom: parsed});
+                      } else {
+                        // Reset to last valid value
+                        setCustomSensitivityInput(String(settings.speakerSensitivityCustom ?? 0.30));
+                      }
+                    }}
+                    style={{
+                      backgroundColor: '#007AFF',
+                      paddingHorizontal: 14,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                    }}>
+                    <Text style={{color: '#fff', fontFamily: settings.fontFamily, fontSize: 14}}>
+                      Apply
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={[styles.settingSubtext, isDarkMode && styles.subtextDark, ff]}>
+                  Current: {settings.speakerSensitivityCustom?.toFixed(2) ?? '0.30'}
+                  {' '}({((settings.speakerSensitivityCustom ?? 0.30) * 100).toFixed(0)}% difference threshold)
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
 
         <TouchableOpacity
           style={[styles.settingItem, isDarkMode && styles.settingItemDark]}

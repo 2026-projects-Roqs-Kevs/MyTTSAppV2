@@ -281,6 +281,13 @@ const STTScreen = () => {
     singleSpeakerModeRef.current = settings.singleSpeakerMode;
   }, [settings.singleSpeakerMode]);
 
+  useEffect(() => {
+    speakerDetectionService.setSensitivity(
+      settings.speakerSensitivity,
+      settings.speakerSensitivityCustom,
+    );
+  }, [settings.speakerSensitivity, settings.speakerSensitivityCustom]);
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,

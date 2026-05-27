@@ -16,13 +16,9 @@ interface SettingsContextType {
   effectiveTheme: 'light' | 'dark';
 }
 
-const SettingsContext = createContext<SettingsContextType | undefined>(
-  undefined,
-);
+const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
-export const SettingsProvider: React.FC<{children: ReactNode}> = ({
-  children,
-}) => {
+export const SettingsProvider: React.FC<{children: ReactNode}> = ({children}) => {
   const [settings, setSettings] = useState<AppSettings>({
     fontFamily: 'sans-serif',
     theme: 'system',
@@ -31,12 +27,12 @@ export const SettingsProvider: React.FC<{children: ReactNode}> = ({
     vibrateOnSpeech: false,
     singleSpeakerMode: true,
     noiseReduction: false,
+    speakerSensitivity: 'medium',
+    speakerSensitivityCustom: 0.30,
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
+  useEffect(() => { loadSettings(); }, []);
 
   useEffect(() => {
     const sub = Appearance.addChangeListener(() => {
@@ -84,14 +80,7 @@ export const SettingsProvider: React.FC<{children: ReactNode}> = ({
   };
 
   return (
-    <SettingsContext.Provider
-      value={{
-        settings,
-        updateSettings,
-        resetSettings,
-        isLoading,
-        effectiveTheme: getEffectiveTheme(),
-      }}>
+    <SettingsContext.Provider value={{settings, updateSettings, resetSettings, isLoading, effectiveTheme: getEffectiveTheme()}}>
       {children}
     </SettingsContext.Provider>
   );
@@ -99,8 +88,6 @@ export const SettingsProvider: React.FC<{children: ReactNode}> = ({
 
 export const useSettings = () => {
   const context = useContext(SettingsContext);
-  if (!context) {
-    throw new Error('useSettings must be used within a SettingsProvider');
-  }
+  if (!context) throw new Error('useSettings must be used within a SettingsProvider');
   return context;
 };
